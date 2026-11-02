@@ -25,32 +25,16 @@ Abre http://localhost:3000. Sin configurar nada, la app arranca en **modo demo**
 6. **Administrador:** `ibraguimova19@gmail.com` ya es administrador (en `firestore.rules` y `src/lib/site.ts`). Para añadir más, crea en Firestore la colección `admins` con un documento cuyo ID sea el email en minúsculas.
 7. **Authentication → Settings → Authorized domains → Add domain**: añade `dni-gym.pages.dev` (o el nombre que te dé Cloudflare) y tu dominio propio si lo tienes.
 
-## 3. Publicar en Cloudflare Pages
+## 3. Publicar en Cloudflare (Workers)
 
-1. https://dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git** → elige `laycaobama-sys/DNI-GYM`.
-2. Configuración de build:
-   - **Production branch:** la rama con el código (p. ej. `main`)
-   - **Framework preset:** `None`
-   - **Build command:** `npm run build`
-   - **Build output directory:** `out`
-3. **Environment variables** (Production y Preview):
+El repositorio ya incluye `wrangler.toml`, que publica la carpeta `out/` como recursos estáticos de un Worker.
 
-   | Variable | Valor |
-   |---|---|
-   | `NODE_VERSION` | `22` |
-   | `NEXT_PUBLIC_SITE_URL` | `https://dni-gym.pages.dev` (o tu dominio) |
-   | `NEXT_PUBLIC_FIREBASE_API_KEY` | de `firebaseConfig.apiKey` |
-   | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `authDomain` |
-   | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `projectId` |
-   | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
-   | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
-   | `NEXT_PUBLIC_FIREBASE_APP_ID` | `appId` |
-
-4. **Save and Deploy.** En ~2 minutos la web estará en `https://<proyecto>.pages.dev`.
-5. Dominio propio: Pages → tu proyecto → **Custom domains**. Después añádelo en Firebase (paso 2.7) y actualiza `NEXT_PUBLIC_SITE_URL`, y vuelve a desplegar.
-6. SEO: da de alta el dominio en Google Search Console y Bing Webmaster Tools y envía `https://tudominio/sitemap.xml`.
-
-> Si las variables de Firebase no están puestas, la web se publica igualmente en **modo demo** (usuario de prueba, datos en el navegador). Las claves de `firebaseConfig` son públicas por diseño: la seguridad la dan las reglas de `firestore.rules`.
+1. https://dash.cloudflare.com → **Workers & Pages → Create → Import a repository** → `laycaobama-sys/DNI-GYM`.
+2. **Project name:** `dni-gym` (debe coincidir con `name` en `wrangler.toml`).
+3. **Build command:** `npm run build` · **Deploy command:** `npx wrangler deploy`.
+4. La versión de Node se toma de `.nvmrc` (24). Las claves de Firebase ya van en el código.
+5. Cada push a la rama de producción se publica solo en `https://dni-gym.<tu-subdominio>.workers.dev`.
+6. Dominio propio: Worker → **Settings → Domains & Routes → Add → Custom domain**. Añádelo también en Firebase → Authentication → Authorized domains.
 
 ## 4. Qué incluye
 

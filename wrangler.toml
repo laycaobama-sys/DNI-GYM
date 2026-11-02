@@ -1,4 +1,11 @@
-# Cloudflare Pages: sitio estático generado por `npm run build` en la carpeta out/
+# Cloudflare Workers (recursos estáticos): publica la carpeta out/ generada por `npm run build`.
+# Comando de despliegue en Cloudflare: npx wrangler deploy
 name = "dni-gym"
 compatibility_date = "2026-10-01"
-pages_build_output_dir = "out"
+
+[assets]
+directory = "./out"
+# /ejercicios/hip-thrust → /ejercicios/hip-thrust/index.html
+html_handling = "auto-trailing-slash"
+# rutas inexistentes → out/404.html con estado 404
+not_found_handling = "404-page"
