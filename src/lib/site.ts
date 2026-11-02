@@ -31,3 +31,6 @@ export const SITE = {
 };
 
 export const absoluteUrl = (path = "/") => `${SITE.url}${path.startsWith("/") ? path : `/${path}`}`;
+
+/** Administradores principales (deben coincidir con la lista de firestore.rules). Se pueden añadir más desde la colección `admins` de Firestore. */
+export const ADMIN_EMAILS = ["ibraguimova19@gmail.com"];

@@ -22,7 +22,7 @@ Abre http://localhost:3000. Sin configurar nada, la app arranca en **modo demo**
 3. **Firestore Database → Crear base de datos** → modo producción → región `eur3 (europe-west)`.
 4. **Configuración del proyecto (⚙️) → General → Tus apps → icono Web `</>`** → registra la app (sin Hosting) y copia los 6 valores de `firebaseConfig`.
 5. **Firestore → Reglas**: pega el contenido de `firestore.rules` y pulsa **Publicar**.
-6. **Hazte administrador:** Firestore → **Iniciar colección** `admins` → ID del documento = **tu email de Google en minúsculas** → campo `role` (string) = `admin`.
+6. **Administrador:** `ibraguimova19@gmail.com` ya es administrador (en `firestore.rules` y `src/lib/site.ts`). Para añadir más, crea en Firestore la colección `admins` con un documento cuyo ID sea el email en minúsculas.
 7. **Authentication → Settings → Authorized domains → Add domain**: añade `dni-gym.pages.dev` (o el nombre que te dé Cloudflare) y tu dominio propio si lo tienes.
 
 ## 3. Publicar en Cloudflare Pages

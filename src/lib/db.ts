@@ -23,6 +23,7 @@ import { firebaseEnabled, getFirebase } from "./firebase";
 import type { AppEvent, BodyLog, NutritionDay, UserProfile, Workout } from "./types";
 import { addDays, dayKey, uid as newId, workoutStats } from "./fitness";
 import { ROUTINES } from "@/data/routines";
+import { ADMIN_EMAILS } from "./site";
 import { EXERCISE_BY_SLUG } from "@/data/exercises";
 
 // ───────────────────────── helpers ─────────────────────────
@@ -145,6 +146,7 @@ export async function updateProfile(uid: string, patch: Partial<UserProfile>) {
 export async function isAdminEmail(email: string | null | undefined): Promise<boolean> {
   if (!email) return false;
   if (!firebaseEnabled) return readLocal().admins.includes(email) || email === DEMO_USER.email;
+  if (ADMIN_EMAILS.includes(email.toLowerCase())) return true;
   try {
     const { db } = getFirebase();
     const snap = await getDoc(doc(db, "admins", email.toLowerCase()));
