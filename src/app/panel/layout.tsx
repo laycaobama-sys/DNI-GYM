@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppShell, RequireAuth } from "@/components/app-shell";
 import { DataProvider } from "@/components/data-provider";
+import { PlayerProvider } from "@/components/workout-player";
 
 export const metadata: Metadata = {
   title: { default: "Mi panel", template: "%s · Mi panel | DNI GYM" },
@@ -9,9 +10,11 @@ export const metadata: Metadata = {
 
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RequireAuth>
+    <RequireAuth onboarding>
       <DataProvider>
-        <AppShell>{children}</AppShell>
+        <PlayerProvider>
+          <AppShell>{children}</AppShell>
+        </PlayerProvider>
       </DataProvider>
     </RequireAuth>
   );

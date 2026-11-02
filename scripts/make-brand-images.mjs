@@ -1,0 +1,52 @@
+// Genera las imágenes editoriales (monocromo, alto contraste) de /public/brand
+// a partir de las fotos de dominio público de /public/ejercicios.
+// Uso: node scripts/make-brand-images.mjs
+import path from "node:path";
+import sharp from "sharp";
+
+const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const src = (n) => path.join(root, "public/ejercicios", `${n}.webp`);
+const out = (n) => path.join(root, "public/brand", `${n}.webp`);
+
+// [salida, origen, ancho, alto, posición del recorte]
+const JOBS = [
+  ["hero", "T-Bar_Row_with_Handle-1", 900, 1100, "left"],
+  ["hero-wide", "T-Bar_Row_with_Handle-1", 1280, 720, "center"],
+  ["athlete-woman", "Pallof_Press-1", 800, 1000, "center"],
+  ["jump", "Star_Jump-1", 800, 1000, "center"],
+  ["climber", "Mountain_Climbers-0", 1000, 700, "center"],
+  ["deadlift", "Sumo_Deadlift-1", 800, 1000, "right"],
+  ["kettlebell", "Kettlebell_Thruster-1", 800, 1000, "center"],
+  // grupos musculares
+  ["g-pecho", "Dumbbell_Flyes-1", 700, 875, "center"],
+  ["g-espalda", "Chin-Up-1", 700, 875, "center"],
+  ["g-piernas", "Barbell_Full_Squat-1", 700, 875, "right"],
+  ["g-gluteos", "Barbell_Hip_Thrust-1", 700, 875, "center"],
+  ["g-hombros", "Arnold_Dumbbell_Press-1", 700, 875, "center"],
+  ["g-biceps", "Preacher_Curl-1", 700, 875, "center"],
+  ["g-triceps", "Dips_-_Triceps_Version-0", 700, 875, "center"],
+  ["g-abdomen", "Hanging_Leg_Raise-1", 700, 875, "center"],
+  ["g-cardio", "Star_Jump-1", 700, 875, "center"],
+  // retos y programas
+  ["c-abdomen", "Plank-0", 900, 600, "center"],
+  ["c-gluteos", "Butt_Lift_Bridge-1", 900, 600, "center"],
+  ["c-flexiones", "Pushups-1", 900, 600, "center"],
+  ["c-fullbody", "Freehand_Jump_Squat-0", 900, 600, "center"],
+  ["p-full-body-principiante", "Goblet_Squat-1", 900, 600, "center"],
+  ["p-torso-pierna-4-dias", "Barbell_Bench_Press_-_Medium_Grip-1", 900, 600, "center"],
+  ["p-push-pull-legs", "Barbell_Deadlift-1", 900, 600, "center"],
+  ["p-gluteos-y-piernas", "Barbell_Hip_Thrust-0", 900, 600, "center"],
+  ["p-entrenamiento-en-casa-sin-material", "Mountain_Climbers-1", 900, 600, "center"],
+  ["p-quema-grasa-hiit", "One-Arm_Kettlebell_Swings-1", 900, 600, "center"],
+];
+
+for (const [name, from, w, h, pos] of JOBS) {
+  await sharp(src(from))
+    .resize(w, h, { fit: "cover", position: pos })
+    .grayscale()
+    .linear(1.35, -38)
+    .modulate({ brightness: 0.92 })
+    .webp({ quality: 78 })
+    .toFile(out(name));
+}
+console.log(`${JOBS.length} imágenes generadas en public/brand`);

@@ -28,6 +28,13 @@ export interface UserProfile {
   fatGoal?: number;
   waterGoal?: number;
   demo?: boolean;
+  // ── personalización (cuestionario de bienvenida) ──
+  level?: "principiante" | "intermedio" | "avanzado";
+  place?: "gimnasio" | "casa";
+  focusAreas?: string[];
+  planSlug?: string;
+  /** progreso de retos: { slug: [días completados] } */
+  challenges?: Record<string, number[]>;
 }
 
 export interface WorkoutSet {

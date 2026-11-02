@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { LineChart, Trophy } from "lucide-react";
 import { useData } from "@/components/data-provider";
 import { BarsChart, HBarList, TrendChart } from "@/components/charts";
+import { AchievementsSection } from "@/components/achievements-section";
 import { Card, CardHeader, EmptyState, LinkButton, PageHeader, Stat, Tabs } from "@/components/ui";
 import { EXERCISE_BY_SLUG, groupLabel, type MuscleGroup } from "@/data/exercises";
 import { addDays, bestSetByExercise, fmtDate, fmtNumber, oneRepMax, setsByGroup, startOfWeek } from "@/lib/fitness";
@@ -64,8 +65,9 @@ export default function ProgressPage() {
   if (!workouts.length)
     return (
       <div>
-        <PageHeader title="Progreso" />
-        <Card>
+        <PageHeader title="Progreso y logros" />
+        <AchievementsSection />
+        <Card className="mt-6">
           <EmptyState icon={<LineChart />} title="Tu progreso aparecerá aquí" text="Registra entrenamientos para ver tu fuerza, volumen y récords." action={<LinkButton href="/panel/entrenar">Registrar entreno</LinkButton>} />
         </Card>
       </div>
@@ -78,8 +80,8 @@ export default function ProgressPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Progreso"
-        subtitle="Fuerza, volumen y constancia"
+        title="Progreso y logros"
+        subtitle="Fuerza, volumen, constancia y medallas"
         action={<Tabs value={range} onChange={setRange} items={[{ value: "30", label: "30 días" }, { value: "90", label: "90 días" }, { value: "365", label: "1 año" }]} />}
       />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -88,6 +90,8 @@ export default function ProgressPage() {
         <Stat label="Series efectivas" value={fmtNumber(totalSets)} />
         <Stat label="Tiempo entrenando" value={fmtNumber(totalMin / 60, 1)} unit="h" />
       </div>
+
+      <AchievementsSection />
 
       <Card>
         <CardHeader

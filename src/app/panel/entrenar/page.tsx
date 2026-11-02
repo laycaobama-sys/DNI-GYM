@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +12,7 @@ import {
   Info,
   Minus,
   MoreHorizontal,
+  Play,
   Plus,
   RotateCcw,
   SkipForward,
@@ -20,6 +22,9 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { usePlayer } from "@/components/workout-player";
+import { activeRoutine, nextRoutineDay, routineDaySession } from "@/lib/plan";
+import { ROUTINE_COVER } from "@/data/challenges";
 import { useData } from "@/components/data-provider";
 import { ExerciseBrowser } from "@/components/exercise-browser";
 import { ExerciseQuickView } from "@/components/exercise-detail";
@@ -53,8 +58,9 @@ function useNow(active: boolean) {
 const mmss = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(Math.max(0, Math.floor(sec % 60))).padStart(2, "0")}`;
 
 export default function TrainPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { workouts, saveWorkout } = useData();
+  const player = usePlayer();
   const router = useRouter();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -255,7 +261,28 @@ export default function TrainPage() {
   if (!draft)
     return (
       <div>
-        <PageHeader title="Entrenar" subtitle="Elige una rutina o empieza un entrenamiento libre." />
+        <PageHeader title="Entrenar" subtitle="Entreno guiado paso a paso o registro libre con pesos." />
+        {(() => {
+          const r = activeRoutine(profile);
+          const n = nextRoutineDay(r, workouts);
+          return (
+            <button
+              onClick={() => player.start(routineDaySession(r, n.index))}
+              className="group relative mb-4 flex min-h-48 w-full overflow-hidden rounded-3xl border border-white/10 text-left"
+            >
+              <Image src={ROUTINE_COVER(r.slug)} alt="" fill sizes="(max-width: 1024px) 100vw, 70vw" className="object-cover transition-transform duration-700 group-hover:scale-105" />
+              <span className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+              <span className="relative flex flex-col justify-end p-6">
+                <span className="text-xs font-bold uppercase tracking-wider text-accent">Entreno guiado · {r.name}</span>
+                <span className="mt-1 font-athletic text-5xl font-extrabold uppercase italic leading-none">{n.day.name}</span>
+                <span className="mt-1 text-sm text-white/70">{n.day.focus}</span>
+                <span className="mt-4 inline-flex w-fit items-center gap-2 rounded-2xl bg-accent px-5 py-2.5 font-athletic text-lg font-extrabold uppercase italic text-accent-ink">
+                  <Play className="size-4 fill-current" /> Empezar
+                </span>
+              </span>
+            </button>
+          );
+        })()}
         <div className="grid gap-4 md:grid-cols-2">
           <button
             onClick={() => start({ name: "Entrenamiento libre", exercises: [] })}
@@ -319,7 +346,7 @@ export default function TrainPage() {
                   >
                     <p className="font-semibold">{d.name}</p>
                     <p className="text-xs text-muted">{d.focus}</p>
-                    <p className="mt-2 text-xs text-ink-2">{d.items.length} ejercicios · empezar →</p>
+                    <p className="mt-2 text-xs text-ink-2">{d.items.length} ejercicios · registrar con pesos →</p>
                   </button>
                 ))}
               </div>

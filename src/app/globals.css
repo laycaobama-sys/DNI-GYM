@@ -24,10 +24,16 @@
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-outfit), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-athletic: var(--font-barlow), "Arial Narrow", var(--font-inter), ui-sans-serif, sans-serif;
 
   --animate-frame: frame 2.4s ease-in-out infinite;
   --animate-fade-up: fade-up 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-marquee: marquee 40s linear infinite;
+  --animate-confetti: confetti 2.6s ease-in forwards;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-slow: float 9s ease-in-out infinite;
+  --animate-ken: ken 24s ease-in-out infinite alternate;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
 
   @keyframes frame {
     0%, 38% { opacity: 0; }
@@ -37,6 +43,26 @@
   @keyframes fade-up {
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: none; }
+  }
+  @keyframes grow {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  @keyframes confetti {
+    0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes ken {
+    from { transform: scale(1.02) translate(0, 0); }
+    to { transform: scale(1.1) translate(-1.5%, -1%); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    100% { transform: scale(1.6); opacity: 0; }
   }
   @keyframes marquee {
     from { transform: translateX(0); }
@@ -74,6 +100,30 @@ body {
     linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
   background-size: 56px 56px;
 }
+
+/* grano fotográfico para las imágenes editoriales */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* tinte de marca sobre fotos monocromo */
+.tint-accent { background: linear-gradient(180deg, rgb(198 255 61 / 0) 30%, rgb(198 255 61 / 0.22)); mix-blend-mode: color; }
+
+.glass {
+  background: rgb(20 23 27 / 0.62);
+  border: 1px solid rgb(255 255 255 / 0.09);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 .glow {
   background: radial-gradient(60% 60% at 50% 0%, rgb(198 255 61 / 0.16), transparent 70%);

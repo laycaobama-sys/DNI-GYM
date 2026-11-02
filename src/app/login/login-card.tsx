@@ -1,14 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Check, Info } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { Logo } from "@/components/logo";
-import { ExerciseDemo } from "@/components/exercise-demo";
 import { Spinner } from "@/components/ui";
-import { getExercise } from "@/data/exercises";
 
 function GoogleIcon() {
   return (
@@ -27,7 +26,7 @@ export function LoginCard() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (user && profile && !profile.blocked) router.replace("/panel");
+    if (user && profile && !profile.blocked) router.replace(profile.onboarded ? "/panel" : "/bienvenida");
   }, [user, profile, router]);
 
   const onClick = async () => {
@@ -39,14 +38,19 @@ export function LoginCard() {
     }
   };
 
-  const ex = getExercise("hip-thrust")!;
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="grid min-h-screen bg-bg lg:grid-cols-2">
       <div className="relative flex flex-col px-6 py-8 sm:px-12">
-        <Logo />
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
-          <h1 className="font-display text-3xl font-bold tracking-tight">Bienvenido a DNI GYM</h1>
+        <div className="absolute inset-x-0 top-0 h-72 overflow-hidden lg:hidden">
+          <Image src="/brand/athlete-woman.webp" alt="" fill priority sizes="100vw" className="object-cover object-[50%_20%]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-bg" />
+        </div>
+        <div className="relative">
+          <Logo />
+        </div>
+        <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-12 pt-40 lg:py-12">
+          <h1 className="font-athletic text-5xl font-extrabold uppercase italic leading-[0.92]">Entra en<br /><span className="text-accent">DNI GYM</span></h1>
           <p className="mt-2 text-ink-2">Entra con tu cuenta de Google. Si es tu primera vez, tu cuenta gratuita se crea al instante.</p>
 
           {profile?.blocked && (
@@ -104,22 +108,24 @@ export function LoginCard() {
           </p>
         </div>
       </div>
-      <div className="relative hidden overflow-hidden border-l border-line bg-surface lg:block">
-        <div className="grid-bg absolute inset-0" />
-        <div className="glow absolute inset-0" />
-        <div className="relative flex h-full flex-col justify-center p-16">
-          <div className="card overflow-hidden rounded-3xl shadow-2xl shadow-black/60">
-            <ExerciseDemo exercise={ex} priority sizes="50vw" showLabels />
-            <div className="p-6">
-              <p className="text-sm text-accent">Técnica · Glúteos</p>
-              <p className="mt-1 font-display text-2xl font-semibold">{ex.name}</p>
-              <p className="mt-2 text-sm text-muted">{ex.steps[0]}</p>
-            </div>
+      <div className="relative hidden overflow-hidden lg:block">
+        <div className="grain absolute inset-0">
+          <Image src="/brand/athlete-woman.webp" alt="Atleta entrenando con cadena en el gimnasio" fill priority sizes="50vw" className="animate-ken object-cover object-[50%_25%]" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/10" />
+        <div className="absolute inset-x-0 bottom-0 p-14">
+          <p className="font-athletic text-7xl font-extrabold uppercase italic leading-[0.88]">
+            Hoy empieza
+            <br />
+            <span className="text-accent">tu cambio.</span>
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            {["Plan personalizado", "Entreno guiado", "Retos 30 días", "Nutrición"].map((t) => (
+              <span key={t} className="glass rounded-full px-4 py-2 text-sm text-white">
+                {t}
+              </span>
+            ))}
           </div>
-          <blockquote className="mt-10 max-w-md font-display text-2xl font-semibold leading-snug">
-            “Lo que no se mide, no se puede mejorar.”
-            <span className="mt-2 block text-sm font-normal text-muted">Registra cada entreno y deja que los datos te guíen.</span>
-          </blockquote>
         </div>
       </div>
     </div>

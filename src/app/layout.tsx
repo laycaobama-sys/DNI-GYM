@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Barlow_Condensed, Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { JsonLd } from "@/components/json-ld";
 import { SITE, absoluteUrl } from "@/lib/site";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
+const barlow = Barlow_Condensed({ variable: "--font-barlow", subsets: ["latin"], display: "swap", weight: ["600", "700", "800"], style: ["normal", "italic"] });
 const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"], display: "swap", weight: ["500", "600", "700", "800"] });
 
 export const metadata: Metadata = {
@@ -73,7 +74,7 @@ const orgLd = [
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${inter.variable} ${outfit.variable} h-full antialiased`}>
+    <html lang="es" className={`${inter.variable} ${outfit.variable} ${barlow.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <JsonLd data={orgLd} />
         <Providers>{children}</Providers>

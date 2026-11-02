@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
 import { useAuth } from "./auth-provider";
@@ -11,15 +11,23 @@ import { buttonClass, cn } from "@/lib/cn";
 const NAV = [
   { href: "/ejercicios", label: "Ejercicios" },
   { href: "/rutinas", label: "Rutinas" },
+  { href: "/retos", label: "Retos 30 días" },
   { href: "/calculadoras", label: "Calculadoras" },
   { href: "/#funciones", label: "Funciones" },
-  { href: "/#faq", label: "FAQ" },
 ];
 
 export function SiteHeader() {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 24);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+  const transparent = pathname === "/" && !scrolled && !open;
   const cta = user ? (
     <Link href="/panel" className={buttonClass("primary", "sm")}>
       Mi panel
@@ -38,10 +46,10 @@ export function SiteHeader() {
     </>
   );
   return (
-    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-bg/75 backdrop-blur-xl">
+    <header className={cn("sticky top-0 z-40 border-b transition-colors duration-300", transparent ? "border-transparent bg-transparent" : "border-white/[0.06] bg-bg/80 backdrop-blur-xl")}>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <Logo />
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
           {NAV.map((n) => (
             <Link
               key={n.href}
@@ -58,7 +66,7 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center gap-1">
           <div className={cn("flex items-center gap-2 transition-opacity", loading && "opacity-0")}>{cta}</div>
           <button
-            className="rounded-lg p-2 text-ink-2 hover:bg-white/5 md:hidden"
+            className="rounded-lg p-2 text-ink-2 hover:bg-white/5 lg:hidden"
             onClick={() => setOpen((o) => !o)}
             aria-label="Abrir menú"
             aria-expanded={open}
@@ -68,7 +76,7 @@ export function SiteHeader() {
         </div>
       </div>
       {open && (
-        <nav className="border-t border-line px-4 py-3 md:hidden" aria-label="Móvil">
+        <nav className="border-t border-line px-4 py-3 lg:hidden" aria-label="Móvil">
           {NAV.map((n) => (
             <Link
               key={n.href}
