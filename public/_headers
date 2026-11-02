@@ -1,0 +1,30 @@
+# Cabeceras de Cloudflare Pages
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/ejercicios/*.webp
+  Cache-Control: public, max-age=2592000
+
+/opengraph-image
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400
+
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+
+/llms-full.txt
+  Content-Type: text/plain; charset=utf-8
+
+/panel/*
+  X-Robots-Tag: noindex
+
+/admin/*
+  X-Robots-Tag: noindex

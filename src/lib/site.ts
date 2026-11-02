@@ -1,7 +1,7 @@
 export const SITE = {
   name: "DNI GYM",
   shortName: "DNI GYM",
-  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://dnigym.com").replace(/\/$/, ""),
+  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://dni-gym.pages.dev").replace(/\/$/, ""),
   locale: "es_ES",
   title: "DNI GYM — App de gimnasio y fitness gratis: rutinas, ejercicios, progreso y nutrición",
   description:

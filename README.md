@@ -2,7 +2,7 @@
 
 Aplicación web profesional de entrenamiento: acceso con Google, registro de entrenamientos, progreso, peso y medidas, nutrición con macros, biblioteca de 84 ejercicios con demostración visual, rutinas, calculadoras y **panel de administración**. Optimizada para SEO y para recomendaciones de asistentes de IA (ChatGPT, Gemini, Perplexity, Claude…).
 
-**Stack:** Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Firebase (Authentication + Firestore) · Recharts.
+**Stack:** Next.js 16 (App Router, exportación estática) · Cloudflare Pages · React 19 · Tailwind CSS 4 · Firebase (Authentication + Firestore) · Recharts.
 
 ---
 
@@ -15,31 +15,42 @@ npm run dev
 
 Abre http://localhost:3000. Sin configurar nada, la app arranca en **modo demo**: el botón «Continuar con Google» entra con un usuario de prueba con 10 semanas de datos de ejemplo, y ese usuario es administrador para que puedas ver `/admin`. Los datos se guardan solo en tu navegador.
 
-## 2. Activar el acceso real con Google (Firebase, gratis)
+## 2. Conectar Firebase (acceso real con Google)
 
-1. Entra en https://console.firebase.google.com → **Añadir proyecto** (puedes desactivar Google Analytics).
-2. **Authentication → Comenzar → Sign-in method → Google → Habilitar** y guarda.
+1. En https://console.firebase.google.com abre tu proyecto.
+2. **Authentication → Comenzar → Sign-in method → Google → Habilitar** → Guardar.
 3. **Firestore Database → Crear base de datos** → modo producción → región `eur3 (europe-west)`.
-4. **Configuración del proyecto (⚙️) → Tus apps → Web (`</>`)** → registra la app y copia los valores de `firebaseConfig`.
-5. Copia `.env.example` a `.env.local` y rellena las variables `NEXT_PUBLIC_FIREBASE_*`.
-6. Publica las reglas de seguridad (incluidas en `firestore.rules`):
-   ```bash
-   npm install -g firebase-tools
-   firebase login
-   firebase use --add        # elige tu proyecto
-   firebase deploy --only firestore:rules
-   ```
-   (O pega el contenido de `firestore.rules` en Firestore → Reglas → Publicar.)
-7. **Hazte administrador:** en Firestore crea la colección `admins` y dentro un documento cuyo **ID sea tu email de Google en minúsculas**, con el campo `role` = `admin`. Al iniciar sesión verás «Panel de administración».
-8. Cuando publiques la web, añade tu dominio en **Authentication → Settings → Authorized domains**.
+4. **Configuración del proyecto (⚙️) → General → Tus apps → icono Web `</>`** → registra la app (sin Hosting) y copia los 6 valores de `firebaseConfig`.
+5. **Firestore → Reglas**: pega el contenido de `firestore.rules` y pulsa **Publicar**.
+6. **Hazte administrador:** Firestore → **Iniciar colección** `admins` → ID del documento = **tu email de Google en minúsculas** → campo `role` (string) = `admin`.
+7. **Authentication → Settings → Authorized domains → Add domain**: añade `dni-gym.pages.dev` (o el nombre que te dé Cloudflare) y tu dominio propio si lo tienes.
 
-## 3. Publicarla en internet (Vercel, gratis)
+## 3. Publicar en Cloudflare Pages
 
-1. Sube este repositorio a GitHub (ya lo está).
-2. Entra en https://vercel.com → **Add New Project** → importa el repositorio.
-3. En **Environment Variables** añade las mismas variables de `.env.local` y `NEXT_PUBLIC_SITE_URL` con tu dominio final.
-4. **Deploy.** Después conecta tu dominio en Vercel → Settings → Domains.
-5. Añade el dominio en Firebase (paso 2.8) y da de alta la web en **Google Search Console** enviando `https://tudominio.com/sitemap.xml`.
+1. https://dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git** → elige `laycaobama-sys/DNI-GYM`.
+2. Configuración de build:
+   - **Production branch:** la rama con el código (p. ej. `main`)
+   - **Framework preset:** `None`
+   - **Build command:** `npm run build`
+   - **Build output directory:** `out`
+3. **Environment variables** (Production y Preview):
+
+   | Variable | Valor |
+   |---|---|
+   | `NODE_VERSION` | `22` |
+   | `NEXT_PUBLIC_SITE_URL` | `https://dni-gym.pages.dev` (o tu dominio) |
+   | `NEXT_PUBLIC_FIREBASE_API_KEY` | de `firebaseConfig.apiKey` |
+   | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `authDomain` |
+   | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `projectId` |
+   | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
+   | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
+   | `NEXT_PUBLIC_FIREBASE_APP_ID` | `appId` |
+
+4. **Save and Deploy.** En ~2 minutos la web estará en `https://<proyecto>.pages.dev`.
+5. Dominio propio: Pages → tu proyecto → **Custom domains**. Después añádelo en Firebase (paso 2.7) y actualiza `NEXT_PUBLIC_SITE_URL`, y vuelve a desplegar.
+6. SEO: da de alta el dominio en Google Search Console y Bing Webmaster Tools y envía `https://tudominio/sitemap.xml`.
+
+> Si las variables de Firebase no están puestas, la web se publica igualmente en **modo demo** (usuario de prueba, datos en el navegador). Las claves de `firebaseConfig` son públicas por diseño: la seguridad la dan las reglas de `firestore.rules`.
 
 ## 4. Qué incluye
 
@@ -63,13 +74,14 @@ admins/{email}                  administradores
 
 ### Monetización futura
 
-Todo es gratuito. Para añadir planes de pago más adelante: guardar `plan` en `users/{uid}` (solo modificable por un servidor), integrar Stripe Checkout con una ruta `/api/stripe/webhook` (Next.js ya corre en servidor en Vercel) y condicionar las funciones premium a ese campo.
+Todo es gratuito. Para añadir planes de pago más adelante: guardar `plan` en `users/{uid}` (solo modificable por un servidor), integrar Stripe Checkout con una ruta `/api/stripe/webhook` (con Cloudflare Pages Functions o Workers) y condicionar las funciones premium a ese campo.
 
 ## 5. Scripts
 
 ```bash
 npm run dev     # desarrollo
-npm run build   # build de producción
+npm run build   # build de producción (genera out/)
+npm run preview # sirve out/ en local
 npm run lint    # ESLint
 node scripts/fetch-exercise-images.mjs   # descarga/convierte imágenes de nuevos ejercicios
 ```

@@ -1,12 +1,15 @@
 import type { NextConfig } from "next";
 
-// STATIC_EXPORT=1 genera una versión 100% estática (carpeta out/) para previsualizar sin servidor.
-const staticExport = process.env.STATIC_EXPORT === "1";
+// La web se publica como sitio estático (carpeta out/) en Cloudflare Pages.
+// Toda la lógica de usuario corre en el navegador contra Firebase (Auth + Firestore).
+// ARTIFACT_PREVIEW=1 solo se usa para la vista previa privada en Claude.
+const artifactPreview = process.env.ARTIFACT_PREVIEW === "1";
 
 const nextConfig: NextConfig = {
-  ...(staticExport ? { output: "export" as const, trailingSlash: true, assetPrefix: "/app-assets", images: { unoptimized: true } } : {}),
-  cacheComponents: !staticExport,
-  partialPrefetching: !staticExport,
+  output: "export",
+  trailingSlash: true,
+  images: { unoptimized: true },
+  ...(artifactPreview ? { assetPrefix: "/app-assets" } : {}),
   turbopack: {
     rules: {
       "*.css": {

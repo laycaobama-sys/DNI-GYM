@@ -1,0 +1,4 @@
+# Cloudflare Pages: sitio estático generado por `npm run build` en la carpeta out/
+name = "dni-gym"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "out"

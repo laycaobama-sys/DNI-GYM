@@ -4,6 +4,8 @@ import { ROUTINES } from "@/data/routines";
 import { CALCULATORS } from "@/data/calculators";
 import { absoluteUrl } from "@/lib/site";
 
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date("2026-11-02");
   const page = (path: string, priority: number, changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] = "weekly") => ({

@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "preview": "npx serve out"
   },
   "dependencies": {
     "firebase": "^13.1.0",
@@ -26,5 +26,8 @@
     "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

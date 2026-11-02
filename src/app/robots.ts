@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/site";
 
+export const dynamic = "force-static";
+
 // Permitimos explícitamente a buscadores y asistentes de IA (Google, Bing, ChatGPT, Claude, Perplexity, Gemini…)
 const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Bytespider", "meta-externalagent", "cohere-ai", "YouBot", "DuckAssistBot", "MistralAI-User"];
 
