@@ -9,6 +9,8 @@ import { Avatar } from "@/components/app-shell";
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader } from "@/components/ui";
 import { ACTIVITY_FACTORS, GOAL_LABELS, computeNutritionGoals, fmtDate, fmtNumber } from "@/lib/fitness";
 import { exportUserData, resetDemoData } from "@/lib/db";
+import { DIET_LABELS } from "@/lib/meals";
+import { Reminders } from "@/components/reminders";
 import type { Activity, Goal, Sex, UserProfile } from "@/lib/types";
 
 export default function ProfilePage() {
@@ -46,6 +48,10 @@ export default function ProfilePage() {
         carbsGoal: f.carbsGoal,
         fatGoal: f.fatGoal,
         waterGoal: f.waterGoal,
+        diet: f.diet,
+        sessionMinutes: f.sessionMinutes,
+        place: f.place,
+        trainTime: f.trainTime,
       };
       if (applySuggested && suggested) Object.assign(patch, suggested, { maintenance: undefined });
       delete (patch as Record<string, unknown>).maintenance;
@@ -151,6 +157,30 @@ export default function ProfilePage() {
                 ))}
               </select>
             </Field>
+            <Field label="Alimentación" className="col-span-2">
+              <select className="input" value={f.diet ?? "omnivora"} onChange={(e) => set("diet", e.target.value as UserProfile["diet"])}>
+                {Object.entries(DIET_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Minutos por sesión">
+              <select className="input" value={f.sessionMinutes ?? 45} onChange={(e) => set("sessionMinutes", Number(e.target.value))}>
+                {[20, 30, 45, 60, 75].map((m) => (
+                  <option key={m} value={m}>
+                    {m} min
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Dónde entrenas">
+              <select className="input" value={f.place ?? "gimnasio"} onChange={(e) => set("place", e.target.value as UserProfile["place"])}>
+                <option value="gimnasio">Gimnasio</option>
+                <option value="casa">En casa</option>
+              </select>
+            </Field>
             <Field label="Peso objetivo (kg)">
               <input type="number" step="0.1" className="input" value={f.targetWeight ?? ""} onChange={(e) => set("targetWeight", num(e.target.value))} />
             </Field>
@@ -196,8 +226,10 @@ export default function ProfilePage() {
         </Button>
       </div>
 
+      <Reminders />
+
       <Card>
-        <CardHeader title="Tus datos" subtitle="Privacidad y control total sobre tu información" />
+        <CardHeader title="Tus datos" subtitle="Se guardan para siempre en tu cuenta de Google: aunque cierres sesión o cambies de móvil, todo sigue aquí." />
         <div className="flex flex-col gap-3 p-5 sm:flex-row">
           <Button variant="secondary" onClick={download}>
             <Download className="size-4" /> Exportar mis datos (JSON)

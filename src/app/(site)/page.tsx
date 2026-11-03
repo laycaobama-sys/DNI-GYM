@@ -17,8 +17,10 @@ import {
   Sparkles,
   Tablet,
   Target,
-  Timer,
   Trophy,
+  SlidersHorizontal,
+  WifiOff,
+  BellRing,
 } from "lucide-react";
 import { EXERCISES, GROUPS } from "@/data/exercises";
 import { ROUTINES } from "@/data/routines";
@@ -53,14 +55,16 @@ function SectionTitle({ eyebrow, title, text, center }: { eyebrow: string; title
 }
 
 const FEATURES = [
-  { icon: PlayCircle, title: "Entreno guiado", text: "Demostración, cuenta atrás y descansos automáticos." },
-  { icon: ListChecks, title: "Registro de series", text: "Kilos y repeticiones con tu marca anterior a la vista." },
-  { icon: BarChart3, title: "Progreso y récords", text: "1RM estimado, volumen y récords automáticos." },
-  { icon: Salad, title: "Calorías y macros", text: "Objetivos personalizados y +100 alimentos." },
+  { icon: PlayCircle, title: "Entreno guiado", text: "Demostración, cuenta atrás, descansos y aviso sonoro." },
+  { icon: Salad, title: "Qué comer cada día", text: "Menú diario según tu objetivo, calorías y tipo de dieta." },
+  { icon: SlidersHorizontal, title: "Sesión adaptable", text: "Por tiempo, gym o casa y molestias de hombro, rodilla o espalda." },
+  { icon: ListChecks, title: "Registro en 1 toque", text: "Pesos precargados de tu última sesión y sugeridos por tu 1RM." },
+  { icon: Trophy, title: "Récords y rachas", text: "Aviso al batir tu marca y racha semanal con comodín." },
+  { icon: BarChart3, title: "Progreso que se ve", text: "Gráficas de fuerza, volumen, peso y series por músculo." },
   { icon: Target, title: "Retos de 30 días", text: "Abdominales, glúteos, flexiones y cuerpo completo." },
-  { icon: Trophy, title: "Logros y niveles", text: "Rachas, medallas y niveles que te enganchan." },
-  { icon: Timer, title: "Temporizador de descanso", text: "Con aviso sonoro y vibración en el móvil." },
-  { icon: Cloud, title: "En la nube con Google", text: "Tus datos sincronizados en todos tus dispositivos." },
+  { icon: WifiOff, title: "Funciona sin cobertura", text: "Entrena en el gimnasio aunque no haya conexión." },
+  { icon: BellRing, title: "Recordatorios", text: "Tus días y hora de entreno en el calendario del móvil." },
+  { icon: Cloud, title: "Guardado para siempre", text: "Todo en tu cuenta de Google, en móvil, tablet y PC." },
 ];
 
 export default function HomePage() {
@@ -111,17 +115,17 @@ export default function HomePage() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-accent" />
               </span>
-              App de entrenamiento 100% gratis
+              Entrenador personal 100% gratis · Gym y casa
             </span>
             <h1 className="mt-6 font-athletic text-[clamp(3.6rem,13vw,8.5rem)] font-extrabold uppercase italic leading-[0.86] tracking-tight">
-              Entrena
+              Tu entrenador
               <br />
-              con método.
+              personal.
               <br />
-              <span className="text-accent">Sin excusas.</span>
+              <span className="text-accent">Gratis.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80 sm:text-xl">
-              Rutinas personalizadas, {EXERCISES.length} ejercicios con demostración visual, entreno guiado, retos de 30 días, progreso y nutrición. Todo en una app. Gratis.
+              Te decimos qué entrenar y qué comer cada día según tu objetivo: ganar músculo, perder grasa o ponerte en forma. En el gimnasio o en casa sin material, con entreno guiado paso a paso.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href="/login" className="inline-flex h-14 items-center justify-center gap-3 rounded-2xl bg-white px-7 text-base font-semibold text-[#111] shadow-[0_10px_40px_-10px_rgba(255,255,255,0.5)] transition hover:bg-white/90 active:scale-[0.99]">
@@ -302,7 +306,7 @@ export default function HomePage() {
           <ol className="mt-16 grid gap-4 md:grid-cols-3">
             {[
               { n: "1", icon: Sparkles, t: "Entra con Google", d: "Sin formularios ni contraseñas. Tu cuenta gratuita se crea al instante." },
-              { n: "2", icon: Target, t: "Cuéntanos tu objetivo", d: "Nivel, días disponibles, gimnasio o casa y zonas a mejorar. Creamos tu plan, calorías y macros." },
+              { n: "2", icon: Target, t: "Cuéntanos tu objetivo", d: "Nivel, días, tiempo, gimnasio o casa, zonas a mejorar y cómo comes. Creamos tu plan de entreno y tu menú." },
               { n: "3", icon: PlayCircle, t: "Entrena y progresa", d: "Sigue el entreno guiado de cada día y mira cómo suben tus récords semana a semana." },
             ].map((s) => (
               <li key={s.n} className="relative overflow-hidden rounded-3xl border border-line bg-surface p-7">

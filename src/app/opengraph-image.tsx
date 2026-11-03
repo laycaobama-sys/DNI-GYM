@@ -23,17 +23,19 @@ export default async function OgImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ width: 72, height: 72, borderRadius: 18, background: "#c6ff3d", display: "flex", alignItems: "center", justifyContent: "center", color: "#0b1000", fontSize: 40, fontWeight: 800 }}>
-            D
-          </div>
+          <svg width="76" height="76" viewBox="0 0 64 64">
+            <rect width="64" height="64" rx="15" fill="#c6ff3d" />
+            <path fill="#0b1000" fillRule="evenodd" d="M20 13h15.5C47 13 54 21 51.6 32.4 49.3 43.6 40.6 51 28.6 51H10.4L20 13Zm8.3 9.2-5.3 20.6h5.6c7 0 12-4.4 13.4-11 1.3-6-2.2-9.6-8.2-9.6h-5.5Z" />
+            <path fill="#c6ff3d" d="M4 40.5 60 26v5.2L4 45.7z" />
+          </svg>
           <div style={{ fontSize: 40, fontWeight: 800, display: "flex" }}>
             DNI<span style={{ color: "#c6ff3d", marginLeft: 12 }}>GYM</span>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 84, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2 }}>Entrena con método.</div>
-          <div style={{ fontSize: 84, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2, color: "#c6ff3d" }}>Mide cada progreso.</div>
-          <div style={{ marginTop: 28, fontSize: 32, color: "#b4bac3" }}>Rutinas · 84 ejercicios con técnica · Progreso · Nutrición y macros</div>
+          <div style={{ fontSize: 84, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2 }}>Tu entrenador personal.</div>
+          <div style={{ fontSize: 84, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2, color: "#c6ff3d" }}>Gratis. Gym y casa.</div>
+          <div style={{ marginTop: 28, fontSize: 32, color: "#b4bac3" }}>Plan de entreno y de comidas · Entreno guiado · Progreso</div>
         </div>
         <div style={{ display: "flex", gap: 16 }}>
           {["100% gratis", "Acceso con Google", "Móvil y ordenador"].map((t) => (

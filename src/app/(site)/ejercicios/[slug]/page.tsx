@@ -10,6 +10,7 @@ import { ExerciseCard } from "@/components/exercise-browser";
 import { JsonLd } from "@/components/json-ld";
 import { buttonClass } from "@/lib/cn";
 import { absoluteUrl } from "@/lib/site";
+import { substitutes } from "@/lib/adapt";
 
 export function generateStaticParams() {
   return EXERCISES.map((e) => ({ slug: e.slug }));
@@ -37,7 +38,20 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
   const inRoutines = ROUTINES.filter((r) => r.days.some((d) => d.items.some((it) => it.slug === e.slug)));
   const [img0, img1] = exerciseImages(e);
 
+  const alts = substitutes(e.slug).slice(0, 3);
+  const faq = [
+    { q: `¿Qué músculos trabaja ${e.name.toLowerCase()}?`, a: `Trabaja principalmente ${e.primary.join(", ").toLowerCase()}${e.secondary.length ? ` y, de forma secundaria, ${e.secondary.join(", ").toLowerCase()}` : ""}.` },
+    { q: `¿Cuántas series y repeticiones de ${e.name.toLowerCase()} debo hacer?`, a: `Una recomendación general es ${e.prescription}, con 1–2 repeticiones en reserva. Es un ejercicio de nivel ${e.level}.` },
+    { q: `¿Cuál es el error más común en ${e.name.toLowerCase()}?`, a: `${e.mistakes[0]} ${e.tips[0] ? `Consejo: ${e.tips[0]}` : ""}`.trim() },
+    ...(alts.length ? [{ q: `¿Qué ejercicio puedo hacer en lugar de ${e.name.toLowerCase()}?`, a: `Alternativas para el mismo músculo: ${alts.map((x) => x.name).join(", ")}.` }] : []),
+  ];
+
   const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    },
     {
       "@context": "https://schema.org",
       "@type": "HowTo",
@@ -97,7 +111,7 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
             <ExerciseFacts e={e} />
           </div>
           <div className="mt-6">
-            <ExerciseMuscles e={e} />
+            <ExerciseMuscles e={e} map />
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link href="/panel/entrenar" className={buttonClass("primary", "md")}>
@@ -111,6 +125,27 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
       <div className="mt-14 max-w-4xl">
         <ExerciseSteps e={e} />
       </div>
+
+      <section className="mt-14 max-w-4xl">
+        <h2 className="font-display text-xl font-semibold">Preguntas frecuentes sobre {e.name.toLowerCase()}</h2>
+        <div className="mt-4 divide-y divide-line border-y border-line">
+          {faq.map((f) => (
+            <div key={f.q} className="py-4">
+              <h3 className="font-semibold">{f.q}</h3>
+              <p className="mt-1.5 leading-relaxed text-ink-2">{f.a}</p>
+            </div>
+          ))}
+        </div>
+        {alts.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {alts.map((x) => (
+              <Link key={x.slug} href={`/ejercicios/${x.slug}`} className="rounded-full border border-line px-4 py-1.5 text-sm text-ink-2 hover:border-accent/40 hover:text-ink">
+                {x.name}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       {inRoutines.length > 0 && (
         <section className="mt-14">

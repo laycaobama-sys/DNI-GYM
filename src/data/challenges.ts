@@ -160,24 +160,40 @@ function parseTarget(e: Exercise): { reps?: number; seconds?: number } {
   return { reps: reps ? Number(reps[2] ?? reps[1]) : 12 };
 }
 
-/** Entrenos generados por grupo muscular y nivel (casa y gimnasio). */
-export function quickWorkouts(place: "casa" | "gimnasio" = "gimnasio"): QuickWorkout[] {
+function seeded(seed: string) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Entrenos por grupo muscular y nivel.
+ * - Casa: solo ejercicios sin material.
+ * - Gimnasio: prioriza barra, mancuernas, poleas y máquinas (no repite los de casa).
+ * - `seed` (p. ej. la fecha) rota los ejercicios para que cambien cada día.
+ */
+export function quickWorkouts(place: "casa" | "gimnasio" = "gimnasio", seed = ""): QuickWorkout[] {
   const out: QuickWorkout[] = [];
   for (const g of GROUPS) {
-    const pool = EXERCISES.filter(
-      (e) => e.group === g.id && (place === "gimnasio" || e.equipment === "peso corporal"),
-    );
+    const all = EXERCISES.filter((e) => e.group === g.id);
+    const equipped = all.filter((e) => e.equipment !== "peso corporal");
+    const pool = place === "casa" ? all.filter((e) => e.equipment === "peso corporal") : equipped.length >= 3 ? equipped : all;
     if (pool.length < 2) continue;
     for (const level of ["principiante", "intermedio", "avanzado"] as Level[]) {
-      const ranked = [...pool].sort((a, b) => {
-        const score = (e: Exercise) => (e.level === level ? 0 : 1) + (level === "principiante" && e.level === "avanzado" ? 2 : 0);
-        return score(a) - score(b);
-      });
+      const rnd = seeded(`${seed}:${g.id}:${level}:${place}`);
+      const ranked = [...pool]
+        .map((e) => ({ e, k: (e.level === level ? 0 : 1) + (level === "principiante" && e.level === "avanzado" ? 2 : 0) + rnd() * 0.9 }))
+        .sort((a, b) => a.k - b.k)
+        .map((x) => x.e);
       const chosen = ranked.slice(0, Math.min(LEVEL_EX[level], ranked.length));
       const sets = LEVEL_SETS[level];
       const items: PlanItem[] = chosen.map((e) => ({ slug: e.slug, sets, ...parseTarget(e), rest: e.group === "cardio" ? 30 : level === "avanzado" ? 75 : 60 }));
       const minutes = Math.round(items.reduce((a, it) => a + it.sets * ((it.seconds ?? (it.reps ?? 10) * 3) + it.rest), 0) / 60);
-      const title = `${g.label} ${place === "casa" ? "en casa" : ""}`.trim();
+      const title = place === "casa" ? `${g.label} en casa` : g.label;
       out.push({
         id: `${g.id}-${level}-${place}`,
         group: g.id,
@@ -185,7 +201,7 @@ export function quickWorkouts(place: "casa" | "gimnasio" = "gimnasio"): QuickWor
         title,
         minutes,
         cover: `/brand/g-${g.id}.webp`,
-        session: { title: `${title} · ${level}`, subtitle: `${minutes} min · ${items.length} ejercicios`, cover: `/brand/g-${g.id}.webp`, items },
+        session: { title: `${title} · ${level}`, subtitle: `${minutes} min · ${items.length} ejercicios · ${place === "casa" ? "sin material" : "gimnasio"}`, cover: `/brand/g-${g.id}.webp`, items },
       });
     }
   }

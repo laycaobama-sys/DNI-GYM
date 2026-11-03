@@ -6,6 +6,10 @@ import { logEvent } from "@/lib/db";
 
 function Telemetry() {
   useEffect(() => {
+    // modo sin conexión (no en desarrollo)
+    if ("serviceWorker" in navigator && location.hostname !== "localhost" && location.protocol === "https:") {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
     // 1 visita por sesión de navegador
     try {
       if (!sessionStorage.getItem("dnigym:visit")) {

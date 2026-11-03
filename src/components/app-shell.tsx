@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BookOpen,
+  ChevronLeft,
   Dumbbell,
   History,
   Home,
@@ -116,6 +117,24 @@ export function RequireAuth({ children, admin, onboarding }: { children: React.R
   return <>{children}</>;
 }
 
+/** Botón «Volver»: vuelve a la pantalla anterior o, si se entró directamente, al inicio del panel. */
+export function BackButton({ withLabel, fallback = "/panel" }: { withLabel?: boolean; fallback?: string }) {
+  const router = useRouter();
+  return (
+    <button
+      onClick={() => (window.history.length > 1 ? router.back() : router.push(fallback))}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full text-sm font-medium text-ink-2 transition-colors hover:text-ink",
+        withLabel ? "border border-line px-3 py-1.5 hover:bg-white/5" : "grid size-10 place-items-center hover:bg-white/5",
+      )}
+      aria-label="Volver"
+    >
+      <ChevronLeft className={withLabel ? "size-4" : "size-6"} />
+      {withLabel && "Volver"}
+    </button>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { profile, isAdmin, signOut, mode } = useAuth();
@@ -124,6 +143,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isActive = (href: string, exact?: boolean) => (exact ? pathname === href || pathname === href + "/" : pathname === href || pathname?.startsWith(href + "/"));
   const lvl = levelInfo(workouts);
+  const isRoot = pathname === "/panel" || pathname === "/panel/";
+  const currentLabel =
+    [...NAV].sort((a, b) => b.href.length - a.href.length).find((n) => pathname?.startsWith(n.href) && n.href !== "/panel")?.label ?? "DNI GYM";
   const streak = weekStreak(workouts);
 
   const nav = (
@@ -206,8 +228,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar móvil / tablet */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
-          <Logo href="/panel" />
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
+          {isRoot ? (
+            <Logo href="/panel" />
+          ) : (
+            <div className="flex min-w-0 items-center gap-1">
+              <BackButton />
+              <span className="truncate font-display text-base font-semibold">{currentLabel}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Link href="/panel/progreso" className="flex items-center gap-1 rounded-full bg-orange/10 px-2.5 py-1 text-xs font-bold text-orange" aria-label={`Racha de ${streak} semanas`}>
               <Flame className="size-4" /> {streak}
@@ -222,7 +251,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Modo demostración: datos de ejemplo guardados solo en este navegador.
           </div>
         )}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-32 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-10">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-32 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+          {!isRoot && (
+            <div className="mb-4 hidden lg:block">
+              <BackButton withLabel />
+            </div>
+          )}
+          {children}
+        </main>
       </div>
 
       {/* Drawer móvil */}

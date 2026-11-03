@@ -32,6 +32,14 @@ export interface UserProfile {
   level?: "principiante" | "intermedio" | "avanzado";
   place?: "gimnasio" | "casa";
   focusAreas?: string[];
+  /** tipo de alimentación para el menú diario */
+  diet?: "omnivora" | "vegetariana" | "vegana" | "sin-lactosa";
+  /** minutos disponibles por sesión */
+  sessionMinutes?: number;
+  /** hora preferida para entrenar (HH:MM) para recordatorios */
+  trainTime?: string;
+  /** días de entreno para recordatorios (0 = lunes … 6 = domingo) */
+  trainDays?: number[];
   planSlug?: string;
   /** progreso de retos: { slug: [días completados] } */
   challenges?: Record<string, number[]>;
@@ -62,6 +70,8 @@ export interface Workout {
   totalSets: number;
   routineSlug?: string;
   notes?: string;
+  /** sensación de 1 (muy duro) a 5 (genial) */
+  feeling?: number;
 }
 
 export interface BodyLog {

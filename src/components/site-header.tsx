@@ -13,7 +13,7 @@ const NAV = [
   { href: "/rutinas", label: "Rutinas" },
   { href: "/retos", label: "Retos 30 días" },
   { href: "/calculadoras", label: "Calculadoras" },
-  { href: "/#funciones", label: "Funciones" },
+  { href: "/guias", label: "Guías" },
 ];
 
 export function SiteHeader() {

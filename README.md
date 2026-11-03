@@ -1,4 +1,4 @@
-# DNI GYM — App de gimnasio y fitness gratuita
+# DNI GYM — Tu entrenador personal gratis (gym y casa)
 
 Aplicación web profesional de entrenamiento: acceso con Google, registro de entrenamientos, progreso, peso y medidas, nutrición con macros, biblioteca de 84 ejercicios con demostración visual, rutinas, calculadoras y **panel de administración**. Optimizada para SEO y para recomendaciones de asistentes de IA (ChatGPT, Gemini, Perplexity, Claude…).
 
@@ -60,7 +60,18 @@ admins/{email}                  administradores
 
 Todo es gratuito. Para añadir planes de pago más adelante: guardar `plan` en `users/{uid}` (solo modificable por un servidor), integrar Stripe Checkout con una ruta `/api/stripe/webhook` (con Cloudflare Pages Functions o Workers) y condicionar las funciones premium a ese campo.
 
-## 5. Scripts
+## 5. Funciones clave
+
+- Cuestionario inicial → plan de entreno, calorías, macros y menú diario según objetivo, nivel, días, tiempo, lugar y dieta.
+- Menú del día (`src/lib/meals.ts`): desayuno, comida, merienda y cena ajustados a las calorías del cliente; omnívora, vegetariana, vegana o sin lactosa; cambia cada día.
+- Entreno guiado (`src/components/workout-player.tsx`): sesión adaptable por tiempo, lugar y molestias (`src/lib/adapt.ts`), sustitución de ejercicios, pesos sugeridos por 1RM, aviso de récord, comparación con la sesión anterior y diario de sensaciones.
+- Entrenos de casa (sin material) y de gimnasio distintos y rotando cada día.
+- Racha semanal con comodín, logros y niveles; recordatorios en el calendario (.ics).
+- Mapa muscular por ejercicio (`src/components/muscle-map.tsx`).
+- Modo sin conexión (`public/sw.js`) + caché sin conexión de Firestore.
+- SEO/AEO: guías con respuesta rápida (`/guias`), FAQ estructuradas en cada ejercicio, `llms.txt`, sitemap y datos estructurados.
+
+## 6. Scripts
 
 ```bash
 npm run dev     # desarrollo
@@ -68,6 +79,7 @@ npm run build   # build de producción (genera out/)
 npm run preview # sirve out/ en local
 npm run lint    # ESLint
 node scripts/fetch-exercise-images.mjs   # descarga/convierte imágenes de nuevos ejercicios
+node scripts/make-brand-images.mjs       # genera las fotos editoriales de /public/brand
 ```
 
 Las imágenes de los ejercicios proceden de [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (dominio público, Unlicense).

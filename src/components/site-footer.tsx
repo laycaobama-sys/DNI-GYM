@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "./logo";
 import { GROUPS } from "@/data/exercises";
 import { ROUTINES } from "@/data/routines";
+import { GUIDES } from "@/data/guides";
 
 export function SiteFooter() {
   return (
@@ -45,6 +46,9 @@ export function SiteFooter() {
             <li><Link href="/calculadoras/macros" className="hover:text-ink">Calculadora de macros</Link></li>
             <li><Link href="/calculadoras/imc" className="hover:text-ink">Calculadora de IMC</Link></li>
             <li><Link href="/calculadoras/1rm" className="hover:text-ink">Calculadora de 1RM</Link></li>
+            {GUIDES.slice(0, 3).map((g) => (
+              <li key={g.slug}><Link href={`/guias/${g.slug}`} className="hover:text-ink">{g.title.split(":")[0]}</Link></li>
+            ))}
             <li><Link href="/privacidad" className="hover:text-ink">Privacidad</Link></li>
             <li><Link href="/terminos" className="hover:text-ink">Términos</Link></li>
           </ul>

@@ -11,13 +11,15 @@ import { CHALLENGES, ROUTINE_COVER, quickWorkouts } from "@/data/challenges";
 import { ROUTINES } from "@/data/routines";
 import type { Level } from "@/data/exercises";
 import { activeRoutine, routineDaySession } from "@/lib/plan";
+import { dayKey } from "@/lib/fitness";
 
 export default function ExplorePage() {
   const { profile, updateProfile } = useAuth();
   const player = usePlayer();
   const [place, setPlace] = useState<"gimnasio" | "casa">(profile?.place ?? "gimnasio");
   const [level, setLevel] = useState<Level>(profile?.level ?? "principiante");
-  const list = useMemo(() => quickWorkouts(place).filter((q) => q.level === level), [place, level]);
+  const [today] = useState(() => dayKey());
+  const list = useMemo(() => quickWorkouts(place, today).filter((q) => q.level === level), [place, level, today]);
   const current = activeRoutine(profile);
 
   return (
@@ -26,7 +28,10 @@ export default function ExplorePage() {
 
       <section>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-athletic text-3xl font-extrabold uppercase italic">Entrenos por zona</h2>
+          <div>
+            <h2 className="font-athletic text-3xl font-extrabold uppercase italic">Entrenos por zona</h2>
+            <p className="text-sm text-muted">Cambian cada día. {place === "casa" ? "Solo con tu peso corporal." : "Con barra, mancuernas, poleas y máquinas."}</p>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Tabs
               value={place}

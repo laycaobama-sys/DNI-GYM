@@ -1,5 +1,21 @@
 export const HOME_FAQ = [
   {
+    q: "¿DNI GYM me dice qué comer cada día?",
+    a: "Sí. Según tu objetivo, tus calorías y tu tipo de alimentación (como de todo, vegetariana, vegana o sin lactosa), cada día te propone un menú de desayuno, comida, merienda y cena con cantidades en gramos. Puedes cambiar cualquier plato y añadirlo a tu diario con un toque.",
+  },
+  {
+    q: "¿Se pierden mis datos si cierro sesión o cambio de móvil?",
+    a: "No. Tus entrenos, tu peso, tu nutrición y tu progreso se guardan en la nube asociados a tu cuenta de Google. Cierra sesión cuando quieras: al volver a entrar, desde cualquier dispositivo, todo seguirá ahí.",
+  },
+  {
+    q: "¿Funciona sin conexión en el gimnasio?",
+    a: "Sí. Una vez abierta, la app guarda tu plan y tus ejercicios en el dispositivo y puedes entrenar sin cobertura; los datos se sincronizan cuando vuelve la conexión.",
+  },
+  {
+    q: "¿Se conecta con Apple Salud, Google Health Connect o Fitbit?",
+    a: "Todavía no: esas integraciones solo están disponibles para apps nativas de iPhone y Android. Está en nuestra hoja de ruta para la app móvil; mientras tanto puedes exportar todos tus datos desde tu perfil.",
+  },
+  {
     q: "¿DNI GYM es realmente gratis?",
     a: "Sí. Todas las funciones de DNI GYM —registro de entrenamientos, rutinas, biblioteca de ejercicios, seguimiento de peso, nutrición y calculadoras— son gratuitas. No pedimos tarjeta ni hay permanencia.",
   },

@@ -3,12 +3,13 @@ import { EXERCISES } from "@/data/exercises";
 import { ROUTINES } from "@/data/routines";
 import { CALCULATORS } from "@/data/calculators";
 import { CHALLENGES } from "@/data/challenges";
+import { GUIDES } from "@/data/guides";
 import { absoluteUrl } from "@/lib/site";
 
 export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date("2026-11-02");
+  const lastModified = new Date("2026-11-03");
   const page = (path: string, priority: number, changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] = "weekly") => ({
     url: absoluteUrl(path),
     lastModified,
@@ -21,6 +22,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page("/rutinas", 0.9),
     page("/calculadoras", 0.8),
     page("/retos", 0.9),
+    page("/guias", 0.9),
+    ...GUIDES.map((g) => page(`/guias/${g.slug}`, 0.85)),
     ...CHALLENGES.map((c) => page(`/retos/${c.slug}`, 0.8)),
     ...CALCULATORS.map((c) => page(`/calculadoras/${c.slug}`, 0.8)),
     ...ROUTINES.map((r) => page(`/rutinas/${r.slug}`, 0.8)),

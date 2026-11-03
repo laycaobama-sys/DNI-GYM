@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Droplets, Flame, Minus, Plus, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { useData } from "@/components/data-provider";
+import { MealPlan } from "@/components/meal-plan";
 import { BarsChart } from "@/components/charts";
 import { Button, Card, CardHeader, Field, Modal, PageHeader, Progress, Spinner, Tabs, cn } from "@/components/ui";
 import { FOODS, FOOD_CATEGORIES, type Food } from "@/data/foods";
@@ -23,6 +25,7 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 
 export default function NutritionPage() {
   const { user, profile } = useAuth();
+  const { workouts } = useData();
   const [date, setDate] = useState(dayKey());
   const [day, setDay] = useState<NutritionDay | null>(null);
   const [week, setWeek] = useState<NutritionDay[]>([]);
@@ -187,6 +190,14 @@ export default function NutritionPage() {
         </Card>
       </div>
 
+      <MealPlan
+        date={date}
+        day={day}
+        trainedToday={workouts.some((w) => dayKey(w.date) === date)}
+        onAdd={(entries) => day && persist({ ...day, entries: [...day.entries, ...entries] })}
+      />
+
+      <h2 className="font-athletic text-3xl font-extrabold uppercase italic">Tu diario</h2>
       {!day ? (
         <div className="grid h-40 place-items-center">
           <Spinner />

@@ -12,6 +12,7 @@ import { ACTIVITY_FACTORS, computeNutritionGoals, dayKey, fmtNumber } from "@/li
 import { recommendRoutine } from "@/lib/plan";
 import { ROUTINE_COVER } from "@/data/challenges";
 import type { Activity, Goal, Sex, UserProfile } from "@/lib/types";
+import { DIET_LABELS, type Diet } from "@/lib/meals";
 
 type GoalChoice = "perder" | "ganar" | "tonificar" | "salud";
 type LevelChoice = NonNullable<UserProfile["level"]>;
@@ -119,15 +120,17 @@ export function Onboarding() {
   const [days, setDays] = useState(profile?.weeklyWorkoutsGoal ?? 3);
   const [areas, setAreas] = useState<string[]>(profile?.focusAreas ?? []);
   const [activity, setActivity] = useState<Activity>(profile?.activity ?? "ligero");
+  const [diet, setDiet] = useState<Diet>((profile?.diet as Diet) ?? "omnivora");
+  const [minutes, setMinutes] = useState(profile?.sessionMinutes ?? 45);
   const [genStep, setGenStep] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const g: Goal = goal === "perder" ? "perder" : goal === "ganar" ? "ganar" : "mantener";
-  const partial: Partial<UserProfile> = { sex: sex ?? "hombre", birthYear: new Date().getFullYear() - age, heightCm: height, activity, goal: g, level: level ?? "principiante", place: place ?? "gimnasio", weeklyWorkoutsGoal: days, focusAreas: areas };
+  const partial: Partial<UserProfile> = { sex: sex ?? "hombre", birthYear: new Date().getFullYear() - age, heightCm: height, activity, goal: g, level: level ?? "principiante", place: place ?? "gimnasio", weeklyWorkoutsGoal: days, focusAreas: areas, diet, sessionMinutes: minutes };
   const nutrition = useMemo(() => computeNutritionGoals(partial, weight), [sex, age, height, activity, g, weight]); // eslint-disable-line react-hooks/exhaustive-deps
   const routine = useMemo(() => recommendRoutine(partial), [g, level, place, days, areas]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const STEPS = ["goal", "sex", "body", "target", "level", "place", "days", "areas", "activity", "generating", "result"] as const;
+  const STEPS = ["goal", "sex", "body", "target", "level", "place", "days", "areas", "activity", "diet", "generating", "result"] as const;
   const key = STEPS[step];
   const progress = Math.min(1, step / (STEPS.length - 2));
 
@@ -140,7 +143,8 @@ export function Onboarding() {
     (key === "place" && place) ||
     key === "days" ||
     key === "areas" ||
-    key === "activity";
+    key === "activity" ||
+    key === "diet";
 
   // animación "creando tu plan"
   useEffect(() => {
@@ -356,6 +360,28 @@ export function Onboarding() {
           </>
         )}
 
+        {key === "diet" && (
+          <>
+            <Title sub="Cada día te recomendaremos qué comer según tu objetivo y tus calorías.">¿Cómo comes?</Title>
+            <div className="grid grid-cols-2 gap-3">
+              {(Object.entries(DIET_LABELS) as [Diet, string][]).map(([k, v]) => (
+                <Choice key={k} selected={diet === k} onClick={() => setDiet(k)} className="py-7 text-center">
+                  <span className="font-athletic text-2xl font-extrabold uppercase italic sm:text-3xl">{v}</span>
+                </Choice>
+              ))}
+            </div>
+            <p className="mb-3 mt-8 text-sm font-semibold text-ink-2">¿Cuánto tiempo tienes por sesión?</p>
+            <div className="grid grid-cols-4 gap-2">
+              {[20, 30, 45, 60].map((m) => (
+                <Choice key={m} selected={minutes === m} onClick={() => setMinutes(m)} className="py-4 text-center">
+                  <span className="font-athletic text-3xl font-extrabold italic">{m}</span>
+                  <span className="block text-xs text-muted">min</span>
+                </Choice>
+              ))}
+            </div>
+          </>
+        )}
+
         {key === "generating" && (
           <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
             <div className="relative grid size-28 place-items-center">
@@ -366,7 +392,7 @@ export function Onboarding() {
             </div>
             <h1 className="mt-10 font-athletic text-5xl font-extrabold uppercase italic">Creando tu plan</h1>
             <ul className="mt-8 space-y-3 text-left">
-              {["Analizando tu perfil", "Calculando calorías y macros", "Eligiendo tu programa", "Preparando tus entrenos"].map((t, i) => (
+              {["Analizando tu perfil", "Calculando calorías y macros", "Eligiendo tu programa", "Preparando tu menú y tus entrenos"].map((t, i) => (
                 <li key={t} className={cn("flex items-center gap-3 transition-opacity duration-300", genStep > i ? "opacity-100" : "opacity-30")}>
                   <span className={cn("grid size-6 place-items-center rounded-full", genStep > i ? "bg-accent text-accent-ink" : "bg-white/10")}>
                     <Check className="size-4" />
@@ -410,7 +436,7 @@ export function Onboarding() {
               </div>
             )}
             <ul className="mt-6 space-y-2 text-sm text-ink-2">
-              {[`${days} entrenos por semana`, place === "casa" ? "Entrenos sin material" : "Entrenos de gimnasio", `Objetivo de peso: ${fmtNumber(target, 1)} kg`, "Retos de 30 días desbloqueados"].map((t) => (
+              {[`${days} entrenos por semana`, place === "casa" ? "Entrenos sin material" : "Entrenos de gimnasio", `Sesiones de ~${minutes} minutos`, `Menú diario: ${DIET_LABELS[diet].toLowerCase()}`, `Objetivo de peso: ${fmtNumber(target, 1)} kg`].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <Check className="size-4 text-accent" /> {t}
                 </li>
@@ -421,8 +447,8 @@ export function Onboarding() {
       </main>
 
       {key !== "generating" && (
-        <div className="fixed inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 sm:px-6">
-          <div className="mx-auto max-w-2xl">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 sm:px-6">
+          <div className="pointer-events-auto mx-auto max-w-2xl">
             {key === "result" ? (
               <button onClick={finish} disabled={saving} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.7)] disabled:opacity-60">
                 {saving ? "Guardando…" : "Empezar ahora"} <ArrowRight className="size-5" />

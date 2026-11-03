@@ -14,6 +14,8 @@ import {
   Pause,
   Play,
   Plus,
+  RefreshCw,
+  SlidersHorizontal,
   SkipForward,
   Trophy,
   Volume2,
@@ -26,9 +28,10 @@ import { ExerciseDemo } from "./exercise-demo";
 import { ExerciseQuickView } from "./exercise-detail";
 import { Modal, cn } from "./ui";
 import { EXERCISE_BY_SLUG, exerciseImages } from "@/data/exercises";
-import type { GuidedSession } from "@/data/challenges";
+import type { GuidedSession, PlanItem } from "@/data/challenges";
+import { PAIN_LABELS, adaptItems, substitutes, suggestedWeight, type AdaptOptions, type Pain } from "@/lib/adapt";
 import { estimateKcal } from "@/lib/plan";
-import { fmtDuration, fmtNumber, uid as newId, workoutStats } from "@/lib/fitness";
+import { bestSetByExercise, fmtDuration, fmtNumber, oneRepMax, uid as newId, workoutStats } from "@/lib/fitness";
 import { logEvent } from "@/lib/db";
 import type { Workout, WorkoutExercise } from "@/lib/types";
 
@@ -141,23 +144,44 @@ interface Result {
 function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: () => void }) {
   const { user, profile, updateProfile } = useAuth();
   const { workouts, saveWorkout, latestWeight } = useData();
-  const steps = useMemo<Step[]>(() => session.items.flatMap((it, item) => Array.from({ length: it.sets }, (_, set) => ({ item, set }))), [session]);
+  // ajustes de la sesión (tiempo, lugar y molestias)
+  const [adapt, setAdapt] = useState<AdaptOptions>(() => ({
+    // por defecto, la sesión se adapta a lo que el cliente indicó en su perfil
+    minutes: profile?.sessionMinutes && profile.sessionMinutes <= 45 ? profile.sessionMinutes : null,
+    place: profile?.place === "casa" ? "casa" : null,
+    pains: [],
+  }));
+  const adapted = useMemo(() => adaptItems(session.items, adapt), [session.items, adapt]);
+  const [items, setItems] = useState<PlanItem[]>(session.items);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setItems(adapted.items);
+  }, [adapted]);
+  const steps = useMemo<Step[]>(() => items.flatMap((it, item) => Array.from({ length: it.sets }, (_, set) => ({ item, set }))), [items]);
 
-  // último peso usado por ejercicio
-  const lastWeight = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const w of workouts) for (const e of w.exercises) if (m[e.slug] == null) m[e.slug] = e.sets.find((s) => s.weight)?.weight ?? 0;
+  // última sesión y mejor marca por ejercicio
+  const lastSets = useMemo(() => {
+    const m: Record<string, WorkoutExercise> = {};
+    for (const w of workouts) for (const e of w.exercises) if (!m[e.slug]) m[e.slug] = e;
     return m;
   }, [workouts]);
+  const bestPrev = useMemo(() => bestSetByExercise(workouts), [workouts]);
+  const [prToast, setPrToast] = useState<string | null>(null);
+  const [swap, setSwap] = useState(false);
+  const [feeling, setFeeling] = useState<number | null>(null);
+  const [notes, setNotes] = useState("");
+
+  const initialResult = (it: PlanItem, set: number): Result => {
+    const prev = lastSets[it.slug];
+    const prevSet = prev?.sets[set] ?? prev?.sets[prev.sets.length - 1];
+    const reps = it.reps ?? it.seconds ?? 10;
+    const weight = prevSet?.weight || suggestedWeight(bestPrev[it.slug]?.e1rm ?? 0, reps);
+    return { weight, reps, done: false };
+  };
 
   const [phase, setPhase] = useState<Phase>("intro");
   const [idx, setIdx] = useState(0);
-  const [results, setResults] = useState<Result[]>(() =>
-    steps.map((s) => {
-      const it = session.items[s.item];
-      return { weight: lastWeight[it.slug] ?? 0, reps: it.reps ?? it.seconds ?? 10, done: false };
-    }),
-  );
+  const [results, setResults] = useState<Result[]>([]);
   const [startedAt, setStartedAt] = useState(0);
   const [endedAt, setEndedAt] = useState(0);
   const [now, setNow] = useState(0);
@@ -172,7 +196,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
   const wake = useRef<{ release: () => Promise<void> } | null>(null);
 
   const step = steps[idx];
-  const item = step ? session.items[step.item] : undefined;
+  const item = step ? items[step.item] : undefined;
   const ex = item ? EXERCISE_BY_SLUG[item.slug] : undefined;
   const timed = item?.seconds != null;
   const bodyweight = ex?.equipment === "peso corporal" || timed;
@@ -210,11 +234,12 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
   const startWork = (i: number) => {
     setIdx(i);
     setPhase("work");
-    const it = session.items[steps[i].item];
+    const it = items[steps[i].item];
     if (it.seconds != null) countdown(it.seconds);
   };
 
   const begin = () => {
+    setResults(steps.map((s) => initialResult(items[s.item], s.set)));
     beep(660, 80, 0.001); // desbloquea el audio en iOS
     setStartedAt(Date.now());
     setPhase("ready");
@@ -231,7 +256,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
     steps.forEach((s, i) => {
       const r = results[i];
       if (!r.done) return;
-      const it = session.items[s.item];
+      const it = items[s.item];
       const e = EXERCISE_BY_SLUG[it.slug];
       if (!byItem.has(s.item)) byItem.set(s.item, { slug: it.slug, name: e?.name ?? it.slug, timed: e?.timed, rest: it.rest, target: it.seconds ? `${it.seconds} s` : `${it.reps}`, sets: [] });
       byItem.get(s.item)!.sets.push({ weight: r.weight || 0, reps: r.reps || 0, done: true });
@@ -267,7 +292,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
       finish();
       return;
     }
-    const rest = session.items[steps[idx].item].rest;
+    const rest = items[steps[idx].item].rest;
     if (rest > 0) {
       setPhase("rest");
       countdown(rest);
@@ -275,9 +300,37 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
   };
 
   const completeSet = () => {
-    setResults((r) => r.map((x, i) => (i === idx ? { ...x, done: true } : x)));
+    const r = results[idx];
+    if (r && item && r.weight > 0 && r.reps > 0) {
+      const e1 = oneRepMax(r.weight, r.reps);
+      const prevBest = Math.max(
+        bestPrev[item.slug]?.e1rm ?? 0,
+        ...results.filter((x, i) => i < idx && x.done && steps[i].item === step.item).map((x) => oneRepMax(x.weight, x.reps)),
+      );
+      if (bestPrev[item.slug] && e1 > prevBest) {
+        setPrToast(`¡Nuevo récord en ${ex?.name}! ${fmtNumber(r.weight, 1)} kg × ${r.reps}`);
+        if (sound) [784, 988, 1319].forEach((f, i) => setTimeout(() => beep(f, 140), i * 120));
+        vibrate([80, 40, 80, 40, 200]);
+        setTimeout(() => setPrToast(null), 3500);
+      }
+    }
+    setResults((rs) => rs.map((x, i) => (i === idx ? { ...x, done: true } : x)));
     vibrate(40);
     next();
+  };
+
+  /** sustituye el ejercicio actual (y sus series pendientes) por otro equivalente */
+  const swapExercise = (slug: string) => {
+    if (!step) return;
+    const target = items[step.item];
+    const alt = EXERCISE_BY_SLUG[slug];
+    setItems((list) =>
+      list.map((it, i) => (i === step.item ? { ...it, slug, seconds: alt?.timed ? it.seconds ?? 30 : undefined, reps: alt?.timed ? undefined : it.reps ?? 12 } : it)),
+    );
+    setResults((rs) =>
+      rs.map((x, i) => (steps[i].item === step.item && !x.done ? initialResult({ ...target, slug }, steps[i].set) : x)),
+    );
+    setSwap(false);
   };
 
   // fin de cuenta atrás + pitidos de 3-2-1
@@ -317,7 +370,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
 
   const setResult = (patch: Partial<Result>) => setResults((r) => r.map((x, i) => (i === idx ? { ...x, ...patch } : x)));
 
-  const estMinutes = Math.max(1, Math.round(session.items.reduce((a, it) => a + it.sets * ((it.seconds ?? (it.reps ?? 10) * 3) + it.rest), 0) / 60));
+  const estMinutes = Math.max(1, Math.round(items.reduce((a, it) => a + it.sets * ((it.seconds ?? (it.reps ?? 10) * 3) + it.rest), 0) / 60));
   const elapsed = startedAt ? Math.max(0, Math.round(((phase === "done" ? endedAt : now) - startedAt) / 1000)) : 0;
   const doneCount = results.filter((r) => r.done).length;
 
@@ -349,7 +402,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
             <div className="mt-2 grid grid-cols-3 gap-3">
               {[
                 [Clock, `${estMinutes} min`, "Duración"],
-                [Dumbbell, String(session.items.length), "Ejercicios"],
+                [Dumbbell, String(items.length), "Ejercicios"],
                 [Flame, `~${estimateKcal(estMinutes * 60, latestWeight, !session.routineSlug)}`, "kcal"],
               ].map(([I, v, l]) => {
                 const Icon = I as typeof Clock;
@@ -362,8 +415,59 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
                 );
               })}
             </div>
+            <div className="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <SlidersHorizontal className="size-4 text-accent" /> Ajusta la sesión a tu día
+              </p>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted">Tiempo disponible</p>
+                <div className="flex flex-wrap gap-2">
+                  {[null, 20, 30, 45].map((m) => (
+                    <button key={String(m)} onClick={() => setAdapt((a) => ({ ...a, minutes: m }))} className={cn("rounded-full border px-3.5 py-1.5 text-sm font-medium", adapt.minutes === m ? "border-accent bg-accent text-accent-ink" : "border-white/15 text-ink-2")}>
+                      {m ? `${m} min` : "Completa"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted">Dónde entrenas hoy</p>
+                <div className="flex flex-wrap gap-2">
+                  {([[null, "Como está"], ["gimnasio", "Gimnasio"], ["casa", "Casa sin material"]] as const).map(([v, l]) => (
+                    <button key={l} onClick={() => setAdapt((a) => ({ ...a, place: v }))} className={cn("rounded-full border px-3.5 py-1.5 text-sm font-medium", adapt.place === v ? "border-accent bg-accent text-accent-ink" : "border-white/15 text-ink-2")}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted">¿Alguna molestia hoy?</p>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.entries(PAIN_LABELS) as [Pain, string][]).map(([k, l]) => {
+                    const on = adapt.pains?.includes(k);
+                    return (
+                      <button
+                        key={k}
+                        onClick={() => setAdapt((a) => ({ ...a, pains: on ? a.pains!.filter((x) => x !== k) : [...(a.pains ?? []), k] }))}
+                        className={cn("rounded-full border px-3.5 py-1.5 text-sm font-medium", on ? "border-warning bg-warning/15 text-warning" : "border-white/15 text-ink-2")}
+                      >
+                        {l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {adapted.changes.length > 0 && (
+                <ul className="space-y-1 rounded-2xl bg-black/30 p-3 text-xs text-ink-2">
+                  {adapted.changes.map((c) => (
+                    <li key={c} className="flex gap-2">
+                      <RefreshCw className="mt-0.5 size-3 shrink-0 text-accent" /> {c}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <ol className="mt-6 divide-y divide-white/[0.06]">
-              {session.items.map((it, i) => {
+              {items.map((it, i) => {
                 const e = EXERCISE_BY_SLUG[it.slug];
                 if (!e) return null;
                 return (
@@ -380,8 +484,8 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
               })}
             </ol>
           </div>
-          <div className="fixed inset-x-0 bottom-0 bg-gradient-to-t from-[#050506] via-[#050506] to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10">
-            <button onClick={begin} className="mx-auto flex h-14 w-full max-w-3xl items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic tracking-wide text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.7)] active:scale-[0.99]">
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 bg-gradient-to-t from-[#050506] via-[#050506]/90 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10">
+            <button onClick={begin} className="pointer-events-auto mx-auto flex h-14 w-full max-w-3xl items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic tracking-wide text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.7)] active:scale-[0.99]">
               <Play className="size-5 fill-current" /> Empezar
             </button>
           </div>
@@ -434,7 +538,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
               </div>
               {(() => {
                 const ns = steps[idx + 1];
-                const nit = session.items[ns.item];
+                const nit = items[ns.item];
                 const ne = EXERCISE_BY_SLUG[nit.slug];
                 return (
                   <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]">
@@ -462,16 +566,41 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
                     </div>
                   </div>
                 )}
-                <button onClick={() => setInfo(true)} className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
-                  <Info className="size-3.5" /> Técnica
-                </button>
+                <div className="absolute right-3 top-3 flex gap-2">
+                  <button onClick={() => setSwap(true)} className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
+                    <RefreshCw className="size-3.5" /> Cambiar
+                  </button>
+                  <button onClick={() => setInfo(true)} className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
+                    <Info className="size-3.5" /> Técnica
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col">
                 <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-                  Ejercicio {step.item + 1}/{session.items.length} · Serie {step.set + 1}/{item.sets}
+                  Ejercicio {step.item + 1}/{items.length} · Serie {step.set + 1}/{item.sets}
                 </p>
                 <h2 className="mt-1 font-athletic text-4xl font-extrabold uppercase italic leading-none sm:text-5xl">{ex.name}</h2>
                 <p className="mt-2 line-clamp-2 text-sm text-ink-2">{ex.steps[0]}</p>
+                {(() => {
+                  const prev = lastSets[item.slug];
+                  const ps = prev?.sets[step.set] ?? prev?.sets[prev.sets.length - 1];
+                  const best = bestPrev[item.slug];
+                  if (!ps && !best) return null;
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      {ps && (
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-ink-2">
+                          Última vez: <strong className="text-ink">{ps.weight ? `${fmtNumber(ps.weight, 1)} kg × ` : ""}{ps.reps}</strong>
+                        </span>
+                      )}
+                      {best && (
+                        <span className="rounded-full bg-warning/10 px-3 py-1 text-warning">
+                          Récord: {fmtNumber(best.weight, 1)} kg × {best.reps}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="my-6 flex justify-center lg:justify-start">
                   {timed ? (
@@ -563,12 +692,62 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
           <p className="mt-4 text-sm text-muted">
             {!doneCount ? "No completaste ninguna serie, así que no se ha guardado." : saved ? (saved.id ? "Guardado en tu historial ✓" : "No se pudo guardar. Revisa tu conexión.") : "Guardando…"}
           </p>
-          <button onClick={onClose} className="mt-8 h-14 w-full rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink">
+          {saved?.id && (
+            <div className="mt-8 w-full text-left">
+              <p className="text-sm font-semibold">¿Cómo te has sentido?</p>
+              <div className="mt-2 grid grid-cols-5 gap-1.5">
+                {["Muy duro", "Duro", "Bien", "Muy bien", "Genial"].map((l, i) => (
+                  <button key={l} onClick={() => setFeeling(i + 1)} className={cn("rounded-xl border px-1 py-2 text-[11px] font-semibold leading-tight", feeling === i + 1 ? "border-accent bg-accent text-accent-ink" : "border-white/15 text-ink-2")}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notas para tu diario (opcional): cómo has dormido, molestias, sensaciones…"
+                rows={2}
+                className="input mt-3 resize-none"
+                aria-label="Notas del entreno"
+              />
+            </div>
+          )}
+          <button
+            onClick={async () => {
+              if (saved?.id && (feeling || notes.trim())) await saveWorkout({ ...saved, feeling: feeling ?? undefined, notes: notes.trim() || undefined }).catch(() => {});
+              onClose();
+            }}
+            className="mt-6 h-14 w-full rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink"
+          >
             Continuar
           </button>
         </div>
       )}
 
+      {prToast && (
+        <div className="fixed inset-x-0 top-[max(4.5rem,calc(env(safe-area-inset-top)+4rem))] z-[65] flex justify-center px-4" role="status">
+          <div className="flex animate-fade-up items-center gap-3 rounded-2xl border border-warning/40 bg-[#1d1606] px-5 py-3 text-sm font-semibold text-warning shadow-2xl">
+            <Trophy className="size-5" /> {prToast}
+          </div>
+        </div>
+      )}
+      <Modal open={swap} onClose={() => setSwap(false)} title="Cambiar ejercicio">
+        <p className="mb-4 text-sm text-ink-2">¿Máquina ocupada o te molesta? Elige un ejercicio equivalente para el mismo músculo:</p>
+        <ul className="space-y-2">
+          {item &&
+            substitutes(item.slug, adapt, items.map((i) => i.slug)).map((alt) => (
+              <li key={alt.slug}>
+                <button onClick={() => swapExercise(alt.slug)} className="flex w-full items-center gap-3 rounded-2xl border border-line p-2 text-left hover:border-accent/50">
+                  <Image src={exerciseImages(alt)[1]} alt="" width={96} height={64} className="h-14 w-20 rounded-xl bg-white object-cover" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{alt.name}</span>
+                    <span className="text-xs capitalize text-muted">{alt.equipment} · {alt.primary.join(", ")}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+        </ul>
+      </Modal>
       <Modal open={info} onClose={() => setInfo(false)} title={ex?.name ?? ""} wide>
         {ex && <ExerciseQuickView e={ex} />}
       </Modal>

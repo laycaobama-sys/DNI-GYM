@@ -1,24 +1,30 @@
 import Link from "next/link";
 
-export function LogoMark({ className = "size-8" }: { className?: string }) {
+const D_PATH =
+  "M20 13h15.5C47 13 54 21 51.6 32.4 49.3 43.6 40.6 51 28.6 51H10.4L20 13Zm8.3 9.2-5.3 20.6h5.6c7 0 12-4.4 13.4-11 1.3-6-2.2-9.6-8.2-9.6h-5.5Z";
+
+/** Monograma de DNI GYM: «D» itálica con corte de velocidad. */
+export function LogoMark({ className = "size-9", inverted }: { className?: string; inverted?: boolean }) {
+  const bg = inverted ? "#0b0d0f" : "#c6ff3d";
+  const fg = inverted ? "#c6ff3d" : "#0b1000";
   return (
-    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
-      <rect width="40" height="40" rx="10" fill="#c6ff3d" />
-      <path
-        d="M9 16.5h3v7H9zM28 16.5h3v7h-3zM12.5 14h3v12h-3zM24.5 14h3v12h-3zM15.5 18.5h9v3h-9z"
-        fill="#0b1000"
-      />
+    <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill={bg} />
+      <path fill={fg} fillRule="evenodd" d={D_PATH} />
+      <path fill={bg} d="M4 40.5 60 26v5.2L4 45.7z" />
     </svg>
   );
 }
 
-export function Logo({ href = "/" }: { href?: string }) {
+export function Logo({ href = "/", compact }: { href?: string; compact?: boolean }) {
   return (
     <Link href={href} className="flex shrink-0 items-center gap-2.5" aria-label="DNI GYM — inicio">
       <LogoMark />
-      <span className="whitespace-nowrap font-display text-lg font-bold tracking-tight">
-        DNI<span className="text-accent"> GYM</span>
-      </span>
+      {!compact && (
+        <span className="whitespace-nowrap font-athletic text-[1.6rem] font-extrabold uppercase italic leading-none tracking-tight">
+          DNI <span className="text-accent">Gym</span>
+        </span>
+      )}
     </Link>
   );
 }

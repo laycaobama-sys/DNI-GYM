@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Lightbulb, CirclePlay } from "lucide-react";
 import { groupLabel, youtubeSearchUrl, type Exercise } from "@/data/exercises";
 import { ExerciseDemo } from "./exercise-demo";
+import { MuscleMap } from "./muscle-map";
 
 export function ExerciseFacts({ e }: { e: Exercise }) {
   const facts = [
@@ -21,9 +22,10 @@ export function ExerciseFacts({ e }: { e: Exercise }) {
   );
 }
 
-export function ExerciseMuscles({ e }: { e: Exercise }) {
+export function ExerciseMuscles({ e, map }: { e: Exercise; map?: boolean }) {
   return (
     <div className="space-y-3">
+      {map && <MuscleMap primary={e.primary} secondary={e.secondary} className="mx-auto max-w-sm" />}
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-muted">Músculos principales</p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -116,7 +118,7 @@ export function ExerciseQuickView({ e }: { e: Exercise }) {
     <div className="space-y-6">
       <ExerciseDemo exercise={e} className="rounded-2xl" sizes="(max-width: 768px) 100vw, 700px" showLabels />
       <ExerciseFacts e={e} />
-      <ExerciseMuscles e={e} />
+      <ExerciseMuscles e={e} map />
       <ExerciseSteps e={e} headingLevel={3} />
       <YoutubeLink e={e} />
     </div>

@@ -8,11 +8,12 @@ import { useAuth } from "@/components/auth-provider";
 import { useData } from "@/components/data-provider";
 import { usePlayer } from "@/components/workout-player";
 import { AchievementIcon } from "@/components/achievement-icon";
+import { MealPlan } from "@/components/meal-plan";
 import { BarsChart, TrendChart } from "@/components/charts";
 import { Card, CardHeader, EmptyState, LinkButton, Spinner, cn } from "@/components/ui";
 import { getNutritionDay, saveNutritionDay } from "@/lib/db";
 import { activeRoutine, achievements, nextRoutineDay, routineDaySession, weekDays } from "@/lib/plan";
-import { addDays, bestSetByExercise, dayKey, fmtDate, fmtDuration, fmtNumber, parseDayKey, startOfWeek, weekStreak } from "@/lib/fitness";
+import { addDays, bestSetByExercise, dayKey, fmtDate, fmtDuration, fmtNumber, parseDayKey, startOfWeek, weekStreak, weekStreakInfo } from "@/lib/fitness";
 import type { NutritionDay } from "@/lib/types";
 import { EXERCISE_BY_SLUG } from "@/data/exercises";
 import { CHALLENGES, CHALLENGE_DAYS, ROUTINE_COVER, challengeDay } from "@/data/challenges";
@@ -55,7 +56,7 @@ export default function DashboardPage() {
       .filter((b) => b.weight && parseDayKey(b.date).getTime() >= now - 90 * 864e5)
       .map((b) => ({ label: fmtDate(b.date, { day: "numeric", month: "short" }), value: b.weight!, sub: fmtDate(b.date) }));
     const prs = Object.entries(bestSetByExercise(workouts)).sort((a, b) => b[1].date - a[1].date).slice(0, 4);
-    return { thisWeek: thisWeek.length, minutes, weeks, weightSeries, prs, streak: weekStreak(workouts), days: weekDays(workouts) };
+    return { thisWeek: thisWeek.length, minutes, weeks, weightSeries, prs, streak: weekStreak(workouts), streakInfo: weekStreakInfo(workouts), days: weekDays(workouts) };
   }, [workouts, body, now]);
 
   const ach = useMemo(() => achievements(workouts, body.filter((b) => b.weight).length, profile), [workouts, body, profile]);
@@ -95,6 +96,11 @@ export default function DashboardPage() {
             {firstName ? `, ${firstName}` : ""}
             {doneToday ? "!" : ""}
           </h1>
+          <p className="mt-2 max-w-xl text-sm text-ink-2 sm:text-base">
+            {doneToday
+              ? "Hoy ya has cumplido. Descansa, come bien y mañana seguimos."
+              : `Hoy toca ${next.day.name}: ${next.day.focus.toLowerCase()}. Pulsa «Empezar» y te guío ejercicio a ejercicio.`}
+          </p>
         </div>
         <span className="hidden sm:block">
           <LinkButton href="/panel/entrenar" variant="secondary">
@@ -102,39 +108,6 @@ export default function DashboardPage() {
           </LinkButton>
         </span>
       </div>
-
-      {/* semana */}
-      <Card className="p-4 sm:p-5">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">
-            Esta semana <span className="text-muted">· {s.thisWeek}/{weeklyGoal} entrenos</span>
-          </p>
-          <span className="flex items-center gap-1.5 rounded-full bg-orange/10 px-3 py-1 text-sm font-bold text-orange">
-            <Flame className="size-4" /> {s.streak} {s.streak === 1 ? "semana" : "semanas"}
-          </span>
-        </div>
-        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-3">
-          {s.days.map((d) => (
-            <div
-              key={d.label}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-2xl py-2.5 transition-colors",
-                d.today ? "bg-white/[0.06] ring-1 ring-accent/50" : "",
-              )}
-            >
-              <span className={cn("text-xs font-semibold", d.today ? "text-accent" : "text-muted")}>{d.label}</span>
-              <span
-                className={cn(
-                  "grid size-9 place-items-center rounded-full text-sm font-bold sm:size-10",
-                  d.done ? "bg-accent text-accent-ink" : d.future ? "text-muted" : "border border-line-strong text-ink-2",
-                )}
-              >
-                {d.done ? <Check className="size-4" /> : d.date}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] lg:gap-6">
         {/* entreno de hoy */}
@@ -213,6 +186,48 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {/* semana */}
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">
+            Esta semana <span className="text-muted">· {s.thisWeek}/{weeklyGoal} entrenos</span>
+          </p>
+          <span className="flex items-center gap-1.5 rounded-full bg-orange/10 px-3 py-1 text-sm font-bold text-orange">
+            <Flame className="size-4" /> {s.streak} {s.streak === 1 ? "semana" : "semanas"}
+          </span>
+        </div>
+        {(s.streakInfo.atRisk || s.streakInfo.freezeUsed) && (
+          <p className={cn("mt-3 rounded-xl px-3 py-2 text-xs", s.streakInfo.atRisk ? "bg-orange/10 text-orange" : "bg-sky/10 text-sky")}>
+            {s.streakInfo.atRisk
+              ? `Tu racha de ${s.streak} semanas está en juego: entrena esta semana para mantenerla.`
+              : "Usaste tu comodín: una semana sin entrenar no rompe tu racha. ¡Sigue así!"}
+          </p>
+        )}
+        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-3">
+          {s.days.map((d) => (
+            <div
+              key={d.label}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-2xl py-2.5 transition-colors",
+                d.today ? "bg-white/[0.06] ring-1 ring-accent/50" : "",
+              )}
+            >
+              <span className={cn("text-xs font-semibold", d.today ? "text-accent" : "text-muted")}>{d.label}</span>
+              <span
+                className={cn(
+                  "grid size-9 place-items-center rounded-full text-sm font-bold sm:size-10",
+                  d.done ? "bg-accent text-accent-ink" : d.future ? "text-muted" : "border border-line-strong text-ink-2",
+                )}
+              >
+                {d.done ? <Check className="size-4" /> : d.date}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <MealPlan compact date={dayKey()} day={today} trainedToday={Boolean(doneToday)} />
 
       {/* retos */}
       <section>

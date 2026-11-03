@@ -140,18 +140,32 @@ export const addDays = (d: Date | number, n: number) => {
   return x;
 };
 
-export function weekStreak(workouts: Workout[]) {
-  if (!workouts.length) return 0;
+/**
+ * Racha semanal «que perdona»: cuenta semanas seguidas con al menos un entreno
+ * y permite un comodín (una semana sin entrenar) sin romper la racha.
+ */
+export function weekStreakInfo(workouts: Workout[]) {
+  if (!workouts.length) return { streak: 0, freezeUsed: false, atRisk: false };
   const weeks = new Set(workouts.map((w) => startOfWeek(w.date).getTime()));
   let streak = 0;
+  let freezeUsed = false;
   let cursor = startOfWeek();
+  const thisWeekDone = weeks.has(cursor.getTime());
   // si esta semana aún no hay entreno, empezamos a contar desde la anterior
-  if (!weeks.has(cursor.getTime())) cursor = addDays(cursor, -7);
-  while (weeks.has(cursor.getTime())) {
-    streak++;
+  if (!thisWeekDone) cursor = addDays(cursor, -7);
+  for (;;) {
+    if (weeks.has(cursor.getTime())) {
+      streak++;
+    } else if (!freezeUsed && streak > 0 && weeks.has(addDays(cursor, -7).getTime())) {
+      freezeUsed = true;
+    } else break;
     cursor = addDays(cursor, -7);
   }
-  return streak;
+  return { streak, freezeUsed, atRisk: !thisWeekDone && streak > 0 };
+}
+
+export function weekStreak(workouts: Workout[]) {
+  return weekStreakInfo(workouts).streak;
 }
 
 export const fmtNumber = (n: number, digits = 0) =>
