@@ -1,7 +1,7 @@
 export const SITE = {
   name: "DNI GYM",
   shortName: "DNI GYM",
-  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://dni-gym.pages.dev").replace(/\/$/, ""),
+  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://dni-gym.ibraguimova19.workers.dev").replace(/\/$/, ""),
   locale: "es_ES",
   title: "DNI GYM · Tu entrenador personal gratis para el gym y en casa",
   tagline: "Tu entrenador personal gratis · Gym y casa",
