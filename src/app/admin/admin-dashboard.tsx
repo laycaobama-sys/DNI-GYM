@@ -15,6 +15,8 @@ import {
   LogIn,
   RefreshCw,
   Search,
+  Shield,
+  Sparkles,
   Trash2,
   UserPlus,
   Users,
@@ -25,12 +27,12 @@ import { Avatar } from "@/components/app-shell";
 import { BarsChart, HBarList, TrendChart } from "@/components/charts";
 import { Logo } from "@/components/logo";
 import { Badge, Button, Card, CardHeader, Modal, Spinner, Stat, Tabs, cn } from "@/components/ui";
-import { adminDeleteEvent, adminListEvents, adminListUsers, adminSetBlocked, listWorkouts } from "@/lib/db";
-import { firebaseEnabled, firebaseProjectId } from "@/lib/firebase";
+import { adminAudit, adminDeleteEvent, adminListEvents, adminListUsers, adminSetBlocked, adminSetRole, adminSystem, adminUserWorkouts, backendEnabled, type AdminSystem, type AuditEntry } from "@/lib/db";
+import { AiChat } from "@/components/ai-chat";
 import { addDays, dayKey, fmtDate, fmtDateTime, fmtNumber, timeAgo } from "@/lib/fitness";
 import type { AppEvent, EventType, UserProfile, Workout } from "@/lib/types";
 
-type Tab = "resumen" | "usuarios" | "actividad" | "errores" | "sistema";
+type Tab = "resumen" | "ia" | "usuarios" | "actividad" | "errores" | "sistema";
 
 const EVENT_META: Record<EventType, { label: string; tone: "neutral" | "accent" | "good" | "warning" | "critical" | "info" }> = {
   signup: { label: "Registro", tone: "accent" },
@@ -70,17 +72,22 @@ export function AdminDashboard() {
   const [detailWorkouts, setDetailWorkouts] = useState<Workout[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
+  const [system, setSystem] = useState<AdminSystem | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const t = Date.now();
       setNow(t);
-      const [u, e] = await Promise.all([adminListUsers(), adminListEvents(t - 30 * 864e5)]);
+      const [u, e, sys, au] = await Promise.all([adminListUsers(), adminListEvents(t - 30 * 864e5), adminSystem().catch(() => null), adminAudit().catch(() => [])]);
       setUsers(u);
       setEvents(e);
+      setSystem(sys);
+      setAuditLog(au);
     } catch (e) {
-      setError(`No se pudieron cargar los datos: ${(e as Error).message}. Comprueba que tu email está en la colección "admins" y que las reglas de Firestore están desplegadas.`);
+      setError(`No se pudieron cargar los datos: ${(e as Error).message}.`);
     } finally {
       setLoading(false);
     }
@@ -95,7 +102,7 @@ export function AdminDashboard() {
     if (!detail) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDetailWorkouts(null);
-    listWorkouts(detail.uid).then(setDetailWorkouts).catch(() => setDetailWorkouts([]));
+    adminUserWorkouts(detail.uid).then(setDetailWorkouts).catch(() => setDetailWorkouts([]));
   }, [detail]);
 
   const m = useMemo(() => {
@@ -191,12 +198,13 @@ export function AdminDashboard() {
             <Avatar name={profile?.name} photo={profile?.photoURL} className="size-8" />
           </div>
         </div>
-        <div className="mx-auto max-w-7xl overflow-x-auto px-4 pb-3 sm:px-6">
+        <div className="no-scrollbar mx-auto max-w-7xl overflow-x-auto px-4 pb-3 sm:px-6">
           <Tabs
             value={tab}
             onChange={setTab}
             items={[
               { value: "resumen", label: "Resumen" },
+              { value: "ia", label: <span className="flex items-center gap-1.5"><Sparkles className="size-3.5 text-accent" /> IA</span> },
               { value: "usuarios", label: `Usuarios (${users.length})` },
               { value: "actividad", label: "Actividad" },
               { value: "errores", label: <span className="flex items-center gap-1.5">Errores {m.authErrors7 + m.clientErrors7 > 0 && <span className="rounded-full bg-critical px-1.5 text-[10px] font-bold text-white">{m.authErrors7 + m.clientErrors7}</span>}</span> },
@@ -207,9 +215,9 @@ export function AdminDashboard() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {!firebaseEnabled && (
+        {!backendEnabled && (
           <div className="mb-6 rounded-xl border border-sky/30 bg-sky/10 p-4 text-sm text-sky">
-            <strong>Modo demostración:</strong> estás viendo usuarios y eventos de ejemplo guardados en este navegador. Cuando conectes Firebase verás aquí a tus usuarios reales.
+            <strong>Modo demostración:</strong> estás viendo usuarios y eventos de ejemplo guardados en este navegador. En producción verás aquí a tus usuarios reales guardados en Cloudflare.
           </div>
         )}
         {error && (
@@ -242,7 +250,7 @@ export function AdminDashboard() {
                   <Stat label="Entrenos guardados (7 d)" value={fmtNumber(m.workouts7)} icon={<CheckCircle2 className="size-4" />} />
                   <Stat label="Perfil completado" value={m.total ? `${fmtNumber((m.onboarded / m.total) * 100)}%` : "—"} hint={`${m.blocked} bloqueados`} />
                 </div>
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <Card>
                     <CardHeader title="Crecimiento de usuarios" subtitle="Total acumulado · 30 días" />
                     <div className="p-3 pt-4">
@@ -371,7 +379,7 @@ export function AdminDashboard() {
 
             {tab === "errores" && (
               <div className="space-y-6">
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                   <Card className="lg:col-span-1">
                     <CardHeader title="Errores de acceso por tipo" subtitle="30 días" />
                     <div className="p-5">{m.errorCodes.length ? <HBarList items={m.errorCodes} /> : <p className="flex items-center gap-2 text-sm text-good"><CheckCircle2 className="size-4" /> Ningún error de acceso.</p>}</div>
@@ -397,15 +405,38 @@ export function AdminDashboard() {
               </div>
             )}
 
+            {tab === "ia" && (
+              <AiChat
+                endpoint="/api/admin/ai"
+                placeholder="Pregunta sobre tu app: usuarios, accesos, errores, crecimiento…"
+                suggestions={[
+                  "Resume el estado de DNI GYM esta semana",
+                  "¿Hay problemas de acceso que deba arreglar?",
+                  "¿Cómo va el crecimiento de usuarios y la retención?",
+                  "Dame 3 acciones para conseguir más usuarios activos",
+                ]}
+                intro={
+                  <div>
+                    <p className="font-athletic text-3xl font-extrabold uppercase italic">Analista IA de DNI GYM</p>
+                    <p className="mt-1 text-sm text-muted">Responde con los datos reales de tu plataforma (usuarios, accesos, errores y entrenos) y te propone acciones concretas.</p>
+                  </div>
+                }
+                disclaimer="Las respuestas se basan en las métricas de los últimos 30 días. Cada consulta queda registrada en la auditoría."
+              />
+            )}
+
             {tab === "sistema" && (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card>
                   <CardHeader title="Estado" />
                   <dl className="divide-y divide-line px-5 pb-3 text-sm">
                     {[
-                      ["Backend", firebaseEnabled ? "Firebase (Auth + Firestore)" : "Modo demo (localStorage)"],
-                      ["Proyecto Firebase", firebaseProjectId ?? "—"],
-                      ["Acceso con Google", firebaseEnabled ? "Activo" : "Simulado"],
+                      ["Backend", system?.backend ?? (backendEnabled ? "Cloudflare Workers + D1" : "Modo demo (navegador)")],
+                      ["Acceso con Google", backendEnabled ? "Activo · sesión segura en Cloudflare" : "Simulado"],
+                      ["IA (Gemini)", system ? (system.ai ? `Activa · ${system.model}` : "Sin configurar (falta GEMINI_API_KEY)") : "—"],
+                      ["Consultas de IA (30 d)", system ? `${fmtNumber(system.aiRequests30d)} · ${fmtNumber(system.aiTokens30d)} tokens` : "—"],
+                      ["Límite IA por usuario/día", system ? String(system.aiDailyLimit) : "—"],
+                      ["Sesiones activas", system ? fmtNumber(system.activeSessions) : "—"],
                       ["Plan de los usuarios", "Gratuito (todas las funciones)"],
                       ["Tu cuenta admin", profile?.email ?? "—"],
                     ].map(([k, v]) => (
@@ -417,23 +448,38 @@ export function AdminDashboard() {
                   </dl>
                 </Card>
                 <Card>
-                  <CardHeader title="Cómo añadir otro administrador" />
-                  <ol className="list-decimal space-y-2 px-10 pb-5 pt-3 text-sm text-ink-2">
-                    <li>Abre Firebase Console → Firestore Database.</li>
-                    <li>
-                      Crea (o abre) la colección <code className="text-accent">admins</code>.
-                    </li>
-                    <li>
-                      Añade un documento cuyo <strong>ID sea el email</strong> de la persona (en minúsculas), con el campo <code className="text-accent">role: &quot;admin&quot;</code>.
-                    </li>
-                    <li>Esa persona verá el enlace «Panel de administración» al iniciar sesión.</li>
-                  </ol>
+                  <CardHeader title="Administradores" subtitle="Quién puede gestionar DNI GYM" />
+                  <div className="space-y-3 px-5 pb-5 pt-3 text-sm text-ink-2">
+                    <p>
+                      Administradores principales (variable <code className="text-accent">ADMIN_EMAILS</code> en Cloudflare): {system?.adminEmails.join(", ") || "—"}.
+                    </p>
+                    <p>Para dar acceso a otra persona, abre su ficha en la pestaña Usuarios y pulsa «Hacer administrador». El cambio queda registrado en la auditoría.</p>
+                  </div>
+                </Card>
+                <Card className="lg:col-span-2">
+                  <CardHeader title="Registro de auditoría" subtitle="Acciones importantes de administración" />
+                  <ul className="max-h-96 divide-y divide-line overflow-y-auto px-5 pb-3">
+                    {auditLog.map((a) => (
+                      <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                        <span>
+                          <Badge tone="info" className="mr-2">
+                            {a.action}
+                          </Badge>
+                          {a.target && <span className="text-ink-2">{a.target}</span>}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {a.actor_email} · {fmtDateTime(a.ts)}
+                        </span>
+                      </li>
+                    ))}
+                    {!auditLog.length && <li className="py-6 text-center text-sm text-muted">Sin acciones registradas todavía.</li>}
+                  </ul>
                 </Card>
                 <Card className="lg:col-span-2">
                   <CardHeader title="Datos y privacidad" />
                   <p className="flex gap-3 px-5 pb-5 pt-3 text-sm text-ink-2">
                     <Database className="size-5 shrink-0 text-muted" />
-                    Los eventos (visitas, accesos y errores) se guardan en la colección <code className="text-accent">events</code> de Firestore. Este panel muestra los últimos 30 días. Los datos de entrenamiento de cada usuario son privados: solo el propio usuario y los administradores pueden leerlos, según las reglas de seguridad de <code>firestore.rules</code>.
+                    Todos los datos se guardan en Cloudflare D1. Las sesiones usan cookies HttpOnly y en la base de datos solo se guarda su huella (hash). Cada usuario solo puede leer sus propios datos; los administradores, solo a través de este panel.
                   </p>
                 </Card>
               </div>
@@ -458,6 +504,19 @@ export function AdminDashboard() {
                   UID: <code>{detail.uid}</code> <Copy className="size-3" />
                 </button>
               </div>
+              {backendEnabled && detail.uid !== profile?.uid && (
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const role = detail.role === "admin" ? "user" : "admin";
+                    await adminSetRole(detail.uid, role);
+                    setUsers((list) => list.map((x) => (x.uid === detail.uid ? { ...x, role } : x)));
+                    setDetail({ ...detail, role });
+                  }}
+                >
+                  <Shield className="size-4" /> {detail.role === "admin" ? "Quitar admin" : "Hacer administrador"}
+                </Button>
+              )}
               <Button variant={detail.blocked ? "secondary" : "danger"} onClick={() => toggleBlock(detail)}>
                 {detail.blocked ? <CheckCircle2 className="size-4" /> : <Ban className="size-4" />}
                 {detail.blocked ? "Desbloquear" : "Bloquear acceso"}

@@ -12,6 +12,7 @@ import {
   Home,
   LineChart,
   Compass,
+  Sparkles,
   Flame,
   LogOut,
   Target,
@@ -31,8 +32,9 @@ import { Button, Spinner, cn } from "./ui";
 
 const NAV = [
   { href: "/panel", label: "Inicio", icon: Home, exact: true },
-  { href: "/panel/explorar", label: "Explorar", icon: Compass },
+  { href: "/panel/coach", label: "DNI AI Coach", icon: Sparkles },
   { href: "/panel/entrenar", label: "Entrenar", icon: Dumbbell },
+  { href: "/panel/explorar", label: "Explorar", icon: Compass },
   { href: "/panel/retos", label: "Retos 30 días", icon: Target },
   { href: "/panel/ejercicios", label: "Ejercicios", icon: BookOpen },
   { href: "/panel/nutricion", label: "Nutrición", icon: Salad },
@@ -44,10 +46,10 @@ const NAV = [
 
 const TABS = [
   { href: "/panel", label: "Inicio", icon: Home, exact: true },
-  { href: "/panel/explorar", label: "Explorar", icon: Compass },
-  { href: "/panel/entrenar", label: "Entrenar", icon: Dumbbell, center: true },
   { href: "/panel/nutricion", label: "Nutrición", icon: Salad },
+  { href: "/panel/entrenar", label: "Entrenar", icon: Dumbbell, center: true },
   { href: "/panel/progreso", label: "Progreso", icon: LineChart },
+  { href: "/panel/perfil", label: "Perfil", icon: User },
 ];
 
 export function Avatar({ name, photo, className }: { name?: string; photo?: string | null; className?: string }) {
@@ -152,7 +154,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <nav className="flex flex-col gap-0.5" aria-label="Panel">
       {NAV.map((n, i) => (
         <div key={n.href}>
-          {i === 6 && <p className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">Seguimiento</p>}
+          {i === 7 && <p className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">Seguimiento</p>}
           <Link
             href={n.href}
             onClick={() => setOpen(false)}
@@ -228,7 +230,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar móvil / tablet */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
+        <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-line bg-bg/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
           {isRoot ? (
             <Logo href="/panel" />
           ) : (
@@ -238,6 +240,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div className="flex items-center gap-2">
+            <Link href="/panel/coach" className="grid size-9 place-items-center rounded-full bg-accent/15 text-accent" aria-label="DNI AI Coach">
+              <Sparkles className="size-4" />
+            </Link>
             <Link href="/panel/progreso" className="flex items-center gap-1 rounded-full bg-orange/10 px-2.5 py-1 text-xs font-bold text-orange" aria-label={`Racha de ${streak} semanas`}>
               <Flame className="size-4" /> {streak}
             </Link>
@@ -251,7 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Modo demostración: datos de ejemplo guardados solo en este navegador.
           </div>
         )}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-32 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">
           {!isRoot && (
             <div className="mb-4 hidden lg:block">
               <BackButton withLabel />
@@ -285,7 +290,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {TABS.map((t) =>
               t.center ? (
                 <Link key={t.href} href={t.href} className="-mt-6 flex flex-col items-center gap-1 pb-2 text-[11px] font-semibold text-ink" aria-label={t.label}>
-                  <span className="grid size-14 place-items-center rounded-2xl bg-accent text-accent-ink shadow-[0_8px_30px_-6px_rgb(198_255_61/0.7)] ring-4 ring-bg">
+                  <span className="grid size-14 place-items-center rounded-2xl bg-accent text-accent-ink shadow-[0_8px_30px_-6px_rgb(255_107_26/0.7)] ring-4 ring-bg">
                     <t.icon className="size-6" />
                   </span>
                   {t.label}

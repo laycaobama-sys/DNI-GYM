@@ -21,7 +21,7 @@ function GoogleIcon() {
 }
 
 export function LoginCard() {
-  const { user, profile, loading, error, signInWithGoogle, mode } = useAuth();
+  const { user, profile, loading, error, signInWithGoogle, signInDev, devAuth, mode } = useAuth();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -80,11 +80,18 @@ export function LoginCard() {
             <div className="mt-4 flex gap-3 rounded-xl border border-sky/30 bg-sky/10 p-4 text-xs leading-relaxed text-sky">
               <Info className="size-4 shrink-0" />
               <span>
-                <strong>Modo demostración:</strong> Firebase aún no está configurado, así que entrarás con un usuario de prueba y los
-                datos se guardan solo en este navegador. Configura las variables <code>NEXT_PUBLIC_FIREBASE_*</code> para activar el
-                acceso real con Google.
+                <strong>Modo demostración:</strong> entrarás con un usuario de prueba y los datos se guardan solo en este navegador.
               </span>
             </div>
+          )}
+
+          {devAuth && (
+            <button
+              onClick={() => signInDev("ibraguimova19@gmail.com")}
+              className="mt-3 h-11 w-full rounded-xl border border-dashed border-warning/50 text-sm font-semibold text-warning"
+            >
+              Entrar sin Google (solo desarrollo local)
+            </button>
           )}
 
           <ul className="mt-8 space-y-2.5 text-sm text-ink-2">

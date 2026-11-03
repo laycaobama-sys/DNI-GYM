@@ -41,7 +41,7 @@ export default function ExercisesPage() {
       <div className="mt-10">
         <ExerciseBrowser />
       </div>
-      <section className="mt-20 grid gap-6 md:grid-cols-3">
+      <section className="mt-20 grid grid-cols-1 gap-6 md:grid-cols-3">
         {GROUPS.map((g) => (
           <div key={g.id}>
             <h2 className="font-display text-lg font-semibold">Ejercicios de {g.label.toLowerCase()}</h2>

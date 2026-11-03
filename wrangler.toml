@@ -1,11 +1,28 @@
-# Cloudflare Workers (recursos estáticos): publica la carpeta out/ generada por `npm run build`.
-# Comando de despliegue en Cloudflare: npx wrangler deploy
+# DNI GYM · Cloudflare Workers
+# - Web estática (out/, generada por `npm run build`) + API en /api/* (worker/index.ts)
+# - Base de datos D1: se crea automáticamente en el primer `wrangler deploy` (sin database_id).
+# - Secretos (NO van aquí): GEMINI_API_KEY → Worker › Settings › Variables and Secrets.
 name = "dni-gym"
+main = "worker/index.ts"
 compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "./out"
-# /ejercicios/hip-thrust → /ejercicios/hip-thrust/index.html
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
 html_handling = "auto-trailing-slash"
-# rutas inexistentes → out/404.html con estado 404
 not_found_handling = "404-page"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dni-gym-db"
+
+[vars]
+FIREBASE_PROJECT_ID = "dni-gym-c6fa2"
+ADMIN_EMAILS = "ibraguimova19@gmail.com"
+GEMINI_MODEL = "gemini-2.5-pro"
+AI_DAILY_LIMIT = "30"
+
+[observability]
+enabled = true

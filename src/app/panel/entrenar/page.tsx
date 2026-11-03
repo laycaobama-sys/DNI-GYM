@@ -283,15 +283,19 @@ export default function TrainPage() {
             </button>
           );
         })()}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <Link href="/panel/explorar" className="rounded-2xl border border-line bg-surface p-4 text-sm font-semibold hover:border-accent/40">Explorar entrenos por zona →</Link>
+          <Link href="/panel/coach" className="rounded-2xl border border-accent/30 bg-accent/[0.06] p-4 text-sm font-semibold text-accent hover:border-accent/60">Crear con DNI AI Coach →</Link>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <button
             onClick={() => start({ name: "Entrenamiento libre", exercises: [] })}
             className="card group flex items-center gap-4 border-accent/30 p-5 text-left transition-colors hover:bg-accent/[0.04]"
           >
-            <span className="grid size-12 place-items-center rounded-xl bg-accent text-accent-ink">
+            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
               <Plus className="size-6" />
             </span>
-            <span>
+            <span className="min-w-0">
               <span className="block font-display text-lg font-semibold">Entrenamiento libre</span>
               <span className="text-sm text-muted">Empieza vacío y añade los ejercicios que quieras.</span>
             </span>
@@ -307,7 +311,7 @@ export default function TrainPage() {
               }
               className="card flex items-center gap-4 p-5 text-left transition-colors hover:border-line-strong"
             >
-              <span className="grid size-12 place-items-center rounded-xl bg-surface-3 text-ink-2">
+              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-surface-3 text-ink-2">
                 <RotateCcw className="size-5" />
               </span>
               <span className="min-w-0">

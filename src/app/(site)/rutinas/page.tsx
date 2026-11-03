@@ -19,7 +19,7 @@ export default function RoutinesPage() {
         Programas completos con ejercicios, series, repeticiones y descansos. Ábrelos en la app con un clic y registra cada sesión para
         ver tu progreso semana a semana.
       </p>
-      <div className="mt-12 grid gap-5 md:grid-cols-2">
+      <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2">
         {ROUTINES.map((r) => (
           <Link key={r.slug} href={`/rutinas/${r.slug}`} className="card group flex flex-col p-7 transition-colors hover:border-accent/40">
             <div className="flex flex-wrap gap-2 text-xs">

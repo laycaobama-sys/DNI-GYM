@@ -43,7 +43,7 @@ export function TrendChart({
   height = 220,
   digits = 1,
   target,
-  color = "#c6ff3d",
+  color = "#ff6b1a",
   domainPad = 1,
 }: {
   data: Point[];
@@ -97,7 +97,7 @@ export function BarsChart({
   unit,
   height = 220,
   digits = 0,
-  color = "#c6ff3d",
+  color = "#ff6b1a",
   target,
 }: {
   data: Point[];

@@ -485,7 +485,7 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
             </ol>
           </div>
           <div className="pointer-events-none fixed inset-x-0 bottom-0 bg-gradient-to-t from-[#050506] via-[#050506]/90 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10">
-            <button onClick={begin} className="pointer-events-auto mx-auto flex h-14 w-full max-w-3xl items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic tracking-wide text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.7)] active:scale-[0.99]">
+            <button onClick={begin} className="pointer-events-auto mx-auto flex h-14 w-full max-w-3xl items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic tracking-wide text-accent-ink shadow-[0_10px_40px_-10px_rgb(255_107_26/0.7)] active:scale-[0.99]">
               <Play className="size-5 fill-current" /> Empezar
             </button>
           </div>
@@ -665,14 +665,14 @@ function WorkoutPlayer({ session, onClose }: { session: GuidedSession; onClose: 
                 className="absolute top-0 block h-3 w-1.5 animate-confetti rounded-sm"
                 style={{
                   left: `${(i * 37) % 100}%`,
-                  background: ["#c6ff3d", "#4cc3ff", "#ff8a3d", "#ffffff"][i % 4],
+                  background: ["#ff6b1a", "#4cc3ff", "#ff8a3d", "#ffffff"][i % 4],
                   animationDelay: `${(i % 7) * 0.15}s`,
                   animationDuration: `${2.2 + (i % 5) * 0.3}s`,
                 }}
               />
             ))}
           </div>
-          <div className="grid size-20 place-items-center rounded-3xl bg-accent text-accent-ink shadow-[0_0_60px_-10px_rgb(198_255_61/0.8)]">
+          <div className="grid size-20 place-items-center rounded-3xl bg-accent text-accent-ink shadow-[0_0_60px_-10px_rgb(255_107_26/0.8)]">
             <Trophy className="size-10" />
           </div>
           <h2 className="mt-6 font-athletic text-5xl font-extrabold uppercase italic leading-none">¡Entreno completado!</h2>

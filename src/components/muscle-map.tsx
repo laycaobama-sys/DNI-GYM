@@ -60,7 +60,7 @@ function Shape({ k, children }: { k: Region; children: React.ReactNode }) {
 export function MuscleMap({ primary, secondary, className }: { primary: string[]; secondary: string[]; className?: string }) {
   const p = regionsOf(primary);
   const s = regionsOf(secondary);
-  const fill = (r: Region) => (p.has(r) ? "var(--color-accent)" : s.has(r) ? "rgb(198 255 61 / 0.38)" : IDLE);
+  const fill = (r: Region) => (p.has(r) ? "var(--color-accent)" : s.has(r) ? "rgb(255 107 26 / 0.38)" : IDLE);
   return (
     <figure className={cn("rounded-3xl border border-line bg-surface p-4", className)}>
       <div className="grid grid-cols-2 gap-2">

@@ -18,7 +18,7 @@ export default function ChallengesPage() {
         Retos de <span className="text-accent">30 días</span>
       </h1>
       <p className="mt-5 max-w-2xl text-lg text-ink-2">Un entreno corto cada día, sin material, que aumenta de intensidad semana a semana. Elige tu reto y empieza hoy.</p>
-      <div className="mt-12 grid gap-5 sm:grid-cols-2">
+      <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2">
         {CHALLENGES.map((c) => (
           <Link key={c.slug} href={`/retos/${c.slug}`} className="group relative aspect-[16/10] overflow-hidden rounded-3xl border border-white/10">
             <Image src={c.cover} alt="" fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover transition-transform duration-700 group-hover:scale-105" />

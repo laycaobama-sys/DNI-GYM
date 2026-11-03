@@ -18,7 +18,7 @@ export default function GuidesPage() {
         Entrena y come <span className="text-accent">con criterio</span>
       </h1>
       <p className="mt-5 max-w-2xl text-lg text-ink-2">Respuestas directas a las dudas más comunes sobre gimnasio, entrenamiento en casa y nutrición.</p>
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {GUIDES.map((g) => (
           <Link key={g.slug} href={`/guias/${g.slug}`} className="group overflow-hidden rounded-3xl border border-line bg-surface transition-colors hover:border-accent/40">
             <div className="relative aspect-[16/9]">

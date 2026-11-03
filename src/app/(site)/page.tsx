@@ -105,7 +105,7 @@ export default function HomePage() {
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-black/10 lg:via-black/30" />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-black/30 to-black/60" />
-          <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_40%,rgb(198_255_61/0.12),transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_40%,rgb(255_107_26/0.12),transparent_70%)]" />
         </div>
 
         <div className="relative mx-auto grid min-h-[88svh] max-w-7xl items-end gap-10 px-4 pb-14 pt-32 sm:px-6 lg:min-h-[94svh] lg:grid-cols-[1.15fr_1fr] lg:items-center lg:pb-20 lg:pt-28">
@@ -284,7 +284,7 @@ export default function HomePage() {
       {/* ═══════════ FUNCIONES ═══════════ */}
       <section className="py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
             <SectionTitle eyebrow="Todo incluido" title={<>Nivel pro.<br /><span className="text-accent">Precio cero.</span></>} text="Las funciones que normalmente están detrás de una suscripción, gratis para todos." />
             <div className="grid gap-px overflow-hidden rounded-3xl border border-line bg-line sm:grid-cols-2">
               {FEATURES.map((f) => (
@@ -303,7 +303,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <SectionTitle center eyebrow="Cómo funciona" title={<>Tu plan en <span className="text-accent">60 segundos</span></>} />
-          <ol className="mt-16 grid gap-4 md:grid-cols-3">
+          <ol className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-3">
             {[
               { n: "1", icon: Sparkles, t: "Entra con Google", d: "Sin formularios ni contraseñas. Tu cuenta gratuita se crea al instante." },
               { n: "2", icon: Target, t: "Cuéntanos tu objetivo", d: "Nivel, días, tiempo, gimnasio o casa, zonas a mejorar y cómo comes. Creamos tu plan de entreno y tu menú." },
@@ -380,7 +380,7 @@ export default function HomePage() {
             <span className="text-accent">es hoy.</span>
           </h2>
           <p className="mt-6 max-w-lg text-lg text-white/80">Crea tu cuenta gratis, responde 8 preguntas y empieza tu primer entreno guiado en menos de un minuto.</p>
-          <Link href="/login" className="mt-10 inline-flex h-14 items-center gap-3 rounded-2xl bg-accent px-8 text-base font-bold text-accent-ink shadow-[0_10px_50px_-10px_rgb(198_255_61/0.7)] transition hover:scale-[1.02]">
+          <Link href="/login" className="mt-10 inline-flex h-14 items-center gap-3 rounded-2xl bg-accent px-8 text-base font-bold text-accent-ink shadow-[0_10px_50px_-10px_rgb(255_107_26/0.7)] transition hover:scale-[1.02]">
             Crear mi plan gratis <ArrowRight className="size-5" />
           </Link>
         </div>

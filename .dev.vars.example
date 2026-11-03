@@ -1,0 +1,4 @@
+# Copia este archivo como .dev.vars para desarrollo local (wrangler dev). Nunca lo subas a Git.
+GEMINI_API_KEY=
+# Solo local: permite entrar sin Google en /api/auth/dev para pruebas automáticas.
+DEV_AUTH=1

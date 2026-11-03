@@ -15,7 +15,7 @@ export default function CalculatorsPage() {
       <p className="text-sm font-semibold uppercase tracking-widest text-accent">Herramientas</p>
       <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">Calculadoras fitness</h1>
       <p className="mt-4 max-w-2xl text-lg text-ink-2">Herramientas gratuitas basadas en fórmulas científicas para planificar tu entrenamiento y tu alimentación.</p>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {CALCULATORS.map((c) => (
           <Link key={c.slug} href={`/calculadoras/${c.slug}`} className="card group p-6 transition-colors hover:border-accent/40">
             <h2 className="font-display text-xl font-semibold">{c.name}</h2>

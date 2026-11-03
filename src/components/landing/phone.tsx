@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 export function Phone({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("relative mx-auto aspect-[9/19.2] w-full max-w-[300px] rounded-[2.75rem] border border-white/15 bg-[#0b0c0e] p-[9px] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9),inset_0_0_0_2px_#1d2026]", className)}>
-      <div className="relative h-full w-full overflow-hidden rounded-[2.2rem] bg-[#07080a]">
+      <div className="relative h-full w-full overflow-hidden rounded-[2.2rem] bg-[#070708]">
         <div className="absolute left-1/2 top-2 z-20 h-[22px] w-[86px] -translate-x-1/2 rounded-full bg-black" />
         <div className="flex items-center justify-between px-6 pt-2.5 text-[10px] font-semibold text-white">
           <span>9:41</span>
@@ -34,7 +34,7 @@ function MiniRing({ pct, color, size }: { pct: number; color: string; size: numb
 export function ActivityRings({ size = 120 }: { size?: number }) {
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <MiniRing pct={0.78} color="#c6ff3d" size={size} />
+      <MiniRing pct={0.78} color="#ff6b1a" size={size} />
       <MiniRing pct={0.6} color="#4cc3ff" size={size - 36} />
       <MiniRing pct={0.88} color="#ff8a3d" size={size - 72} />
     </div>
@@ -136,13 +136,13 @@ export function ScreenProgress() {
         <svg viewBox="0 0 200 60" className="mt-2 h-14 w-full">
           <defs>
             <linearGradient id="pg" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#c6ff3d" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#c6ff3d" stopOpacity="0" />
+              <stop offset="0%" stopColor="#ff6b1a" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#ff6b1a" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path d="M0 50 L25 46 L50 47 L75 38 L100 36 L125 28 L150 24 L175 18 L200 10 L200 60 L0 60Z" fill="url(#pg)" />
-          <path d="M0 50 L25 46 L50 47 L75 38 L100 36 L125 28 L150 24 L175 18 L200 10" fill="none" stroke="#c6ff3d" strokeWidth="2.5" />
-          <circle cx="200" cy="10" r="4" fill="#c6ff3d" />
+          <path d="M0 50 L25 46 L50 47 L75 38 L100 36 L125 28 L150 24 L175 18 L200 10" fill="none" stroke="#ff6b1a" strokeWidth="2.5" />
+          <circle cx="200" cy="10" r="4" fill="#ff6b1a" />
         </svg>
       </div>
       <div className="rounded-2xl bg-white/5 p-3">
@@ -178,7 +178,7 @@ export function ScreenNutrition() {
         <div className="relative grid size-24 place-items-center">
           <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90">
             <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="9" />
-            <circle cx="50" cy="50" r="42" fill="none" stroke="#c6ff3d" strokeWidth="9" strokeLinecap="round" strokeDasharray="200 264" />
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#ff6b1a" strokeWidth="9" strokeLinecap="round" strokeDasharray="200 264" />
           </svg>
           <div className="text-center">
             <p className="font-display text-lg font-semibold leading-none">1.840</p>

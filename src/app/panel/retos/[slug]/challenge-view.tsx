@@ -52,7 +52,7 @@ export function ChallengeView({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.1fr]">
         <div>
           <h2 className="font-display text-lg font-semibold">Calendario</h2>
           <div className="mt-3 grid grid-cols-6 gap-2">
@@ -110,7 +110,7 @@ export function ChallengeView({ slug }: { slug: string }) {
               </ul>
               <button
                 onClick={() => player.start(session)}
-                className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.7)]"
+                className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(255_107_26/0.7)]"
               >
                 <Play className="size-5 fill-current" /> {done.has(selected) ? "Repetir día" : `Empezar día ${selected}`}
               </button>

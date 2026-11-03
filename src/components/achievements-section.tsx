@@ -33,7 +33,7 @@ export function AchievementsSection() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {list.map((a) => (
           <div key={a.id} className={cn("relative rounded-2xl border p-4 text-center", a.unlocked ? "border-accent/40 bg-accent/[0.06]" : "border-line bg-surface")}>
-            <span className={cn("mx-auto grid size-14 place-items-center rounded-2xl", a.unlocked ? "bg-accent text-accent-ink shadow-[0_0_30px_-8px_rgb(198_255_61/0.8)]" : "bg-white/5 text-muted")}>
+            <span className={cn("mx-auto grid size-14 place-items-center rounded-2xl", a.unlocked ? "bg-accent text-accent-ink shadow-[0_0_30px_-8px_rgb(255_107_26/0.8)]" : "bg-white/5 text-muted")}>
               {a.unlocked ? <AchievementIcon name={a.icon} className="size-7" /> : <Lock className="size-5" />}
             </span>
             <p className="mt-3 text-sm font-semibold">{a.title}</p>

@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint",
-    "preview": "npx serve out"
+    "preview": "npx serve out",
+    "dev:worker": "wrangler dev",
+    "typecheck:worker": "tsc -p worker/tsconfig.json",
+    "test:api": "node scripts/test-api.mjs",
+    "test:gemini": "node scripts/test-gemini.mjs",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@google/genai": "^2.32.0",
     "firebase": "^13.1.0",
     "lucide-react": "^1.66.0",
     "next": "16.4.4",
@@ -17,6 +23,7 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261103.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -25,7 +32,8 @@
     "eslint-config-next": "16.4.4",
     "sharp": "^0.35.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.157.0"
   },
   "engines": {
     "node": ">=24.12"

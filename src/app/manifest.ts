@@ -10,8 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: SITE.description,
     start_url: "/panel",
     display: "standalone",
-    background_color: "#07080a",
-    theme_color: "#07080a",
+    background_color: "#070708",
+    theme_color: "#070708",
     lang: "es",
     categories: ["health", "fitness", "sports", "lifestyle"],
     icons: [

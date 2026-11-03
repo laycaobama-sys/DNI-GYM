@@ -87,7 +87,7 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
         </Link>
       </nav>
 
-      <div className="mt-6 grid gap-10 lg:grid-cols-[1.15fr_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[1.15fr_1fr]">
         <div>
           <ExerciseDemo exercise={e} priority className="rounded-3xl border border-line" sizes="(max-width: 1024px) 100vw, 55vw" showLabels />
           <div className="mt-3 grid grid-cols-2 gap-3">
@@ -163,7 +163,7 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
       {related.length > 0 && (
         <section className="mt-14">
           <h2 className="font-display text-xl font-semibold">Otros ejercicios de {groupLabel(e.group).toLowerCase()}</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((r) => (
               <ExerciseCard key={r.slug} e={r} />
             ))}

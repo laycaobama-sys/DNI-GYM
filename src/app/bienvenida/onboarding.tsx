@@ -450,7 +450,7 @@ export function Onboarding() {
         <div className="pointer-events-none fixed inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 sm:px-6">
           <div className="pointer-events-auto mx-auto max-w-2xl">
             {key === "result" ? (
-              <button onClick={finish} disabled={saving} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.7)] disabled:opacity-60">
+              <button onClick={finish} disabled={saving} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent font-athletic text-xl font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(255_107_26/0.7)] disabled:opacity-60">
                 {saving ? "Guardando…" : "Empezar ahora"} <ArrowRight className="size-5" />
               </button>
             ) : (

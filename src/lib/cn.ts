@@ -5,7 +5,7 @@ export type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-accent text-accent-ink hover:bg-[#d4ff63] shadow-[0_0_0_1px_rgb(198_255_61/0.4),0_8px_30px_-8px_rgb(198_255_61/0.55)]",
+    "bg-accent text-accent-ink hover:bg-[#ff8540] shadow-[0_0_0_1px_rgb(255_107_26/0.4),0_8px_30px_-8px_rgb(255_107_26/0.55)]",
   secondary: "bg-surface-3 text-ink hover:bg-line border border-line",
   outline: "border border-line-strong text-ink hover:border-ink-2 hover:bg-white/[0.03]",
   ghost: "text-ink-2 hover:text-ink hover:bg-white/5",

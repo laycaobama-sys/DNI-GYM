@@ -107,7 +107,7 @@ export function Calculator({ kind }: { kind: CalculatorKind }) {
     const orm = oneRepMax(liftW || 0, liftR || 0);
     return (
       <div className="card p-6 sm:p-8">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <NumberInput label="Peso levantado" value={liftW} onChange={setLiftW} unit="kg" min={0} step={2.5} />
           <NumberInput label="Repeticiones completadas" value={liftR} onChange={setLiftR} unit="reps" min={1} max={20} />
         </div>
@@ -152,7 +152,7 @@ export function Calculator({ kind }: { kind: CalculatorKind }) {
   }
 
   const bodyInputs = (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {kind !== "imc" && (
         <Segmented label="Sexo" value={sex} onChange={setSex} options={[{ v: "hombre", l: "Hombre" }, { v: "mujer", l: "Mujer" }]} />
       )}
@@ -192,7 +192,7 @@ export function Calculator({ kind }: { kind: CalculatorKind }) {
     return (
       <div className="card p-6 sm:p-8">
         {bodyInputs}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Result label="Tu IMC" value={fmtNumber(r.i, 1)} big />
           <Result label="Clasificación OMS" value={cat.label} />
         </div>
@@ -224,7 +224,7 @@ export function Calculator({ kind }: { kind: CalculatorKind }) {
     <div className="card p-6 sm:p-8">
       {bodyInputs}
       {kind === "calorias" ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Result label="Metabolismo basal" value={fmtNumber(r.b)} unit="kcal" />
           <Result label="Mantenimiento (TDEE)" value={fmtNumber(r.t)} unit="kcal" />
           <Result label={`Para ${GOAL_LABELS[goal].toLowerCase()}`} value={fmtNumber(r.g)} unit="kcal/día" big />
@@ -234,7 +234,7 @@ export function Calculator({ kind }: { kind: CalculatorKind }) {
           <div className="mt-6">
             <Result label={`Calorías objetivo (${GOAL_LABELS[goal].toLowerCase()})`} value={fmtNumber(r.g)} unit="kcal/día" big />
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               ["Proteína", r.m.protein, 4, "var(--color-protein)"],
               ["Carbohidratos", r.m.carbs, 4, "var(--color-carbs)"],

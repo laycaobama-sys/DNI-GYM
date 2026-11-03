@@ -108,7 +108,7 @@ export default function ProfilePage() {
         </Button>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title="Datos personales" subtitle="Se usan para calcular tus calorías y macros" />
           <div className="grid grid-cols-2 gap-4 p-5">

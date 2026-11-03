@@ -1,30 +1,16 @@
 "use client";
 
 // Capa de datos de DNI GYM.
-// - Con Firebase configurado: Firestore (users/{uid}, users/{uid}/workouts|body|nutrition, events, admins).
-// - Sin configurar: "modo demo" en localStorage para poder probar toda la app sin backend.
+// - Producción: API propia en Cloudflare (Worker + D1) en /api/*, con sesión en cookie HttpOnly.
+// - Modo demo (NEXT_PUBLIC_DEMO_MODE=1 o desarrollo sin backend): localStorage con datos de ejemplo.
 
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  limit as qLimit,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-  writeBatch,
-} from "firebase/firestore";
-import { firebaseEnabled, getFirebase } from "./firebase";
 import type { AppEvent, BodyLog, NutritionDay, UserProfile, Workout } from "./types";
 import { addDays, dayKey, uid as newId, workoutStats } from "./fitness";
 import { ROUTINES } from "@/data/routines";
-import { ADMIN_EMAILS } from "./site";
 import { EXERCISE_BY_SLUG } from "@/data/exercises";
+
+/** true = usa la API de Cloudflare; false = modo demo local. */
+export const backendEnabled = process.env.NEXT_PUBLIC_DEMO_MODE !== "1";
 
 // ───────────────────────── helpers ─────────────────────────
 
@@ -33,6 +19,63 @@ const clean = <T extends object>(o: T): T =>
 
 const stripUndefined = <T extends object>(o: T) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export async function api<T = unknown>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: opts.method ?? "GET",
+      credentials: "same-origin",
+      headers: opts.body !== undefined ? { "content-type": "application/json" } : undefined,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, "Sin conexión. Revisa tu internet e inténtalo de nuevo.");
+  }
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new ApiError(res.status, data?.error || `Error ${res.status}`);
+  return data;
+}
+
+/** Lee una respuesta SSE del Worker y va entregando el texto. */
+export async function streamApi(path: string, body: unknown, onText: (t: string) => void) {
+  const res = await fetch(path, { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  if (!res.ok || !res.body) {
+    const d = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new ApiError(res.status, d.error || `Error ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  let full = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const line = buf.slice(0, i).replace(/^data: /, "");
+      buf = buf.slice(i + 2);
+      if (!line) continue;
+      const msg = JSON.parse(line) as { t?: string; done?: boolean; error?: string };
+      if (msg.error) throw new ApiError(500, msg.error);
+      if (msg.t) {
+        full += msg.t;
+        onText(full);
+      }
+    }
+  }
+  return full;
+}
 
 // ───────────────────────── modo demo (localStorage) ─────────────────────────
 
@@ -56,7 +99,6 @@ function readLocal(): LocalDB {
 
 function writeLocal(db: LocalDB) {
   try {
-    // limitamos el log de eventos en local
     db.events = db.events.slice(-1500);
     localStorage.setItem(LS_KEY, JSON.stringify(db));
   } catch {}
@@ -74,101 +116,48 @@ export const DEMO_USER = {
   photoURL: null as string | null,
 };
 
+/** Solo modo demo: crea/actualiza el perfil local. */
+export async function demoLogin(): Promise<UserProfile> {
+  const now = Date.now();
+  const db = readLocal();
+  const existing = db.users[DEMO_USER.uid];
+  db.users[DEMO_USER.uid] = existing
+    ? { ...existing, lastLoginAt: now, lastActiveAt: now, loginCount: (existing.loginCount ?? 0) + 1 }
+    : { ...DEMO_USER, provider: "demo", createdAt: now, lastLoginAt: now, lastActiveAt: now, loginCount: 1, workoutsCount: 0, onboarded: false, blocked: false, weeklyWorkoutsGoal: 3 };
+  writeLocal(db);
+  seedDemoData(DEMO_USER.uid);
+  return readLocal().users[DEMO_USER.uid];
+}
+
+export function demoProfile(): UserProfile | null {
+  return readLocal().users[DEMO_USER.uid] ?? null;
+}
+
 // ───────────────────────── perfil ─────────────────────────
 
-export async function getProfile(uid: string): Promise<UserProfile | null> {
-  if (!firebaseEnabled) return readLocal().users[uid] ?? null;
-  const { db } = getFirebase();
-  const snap = await getDoc(doc(db, "users", uid));
-  return snap.exists() ? (snap.data() as UserProfile) : null;
-}
-
-/** Crea o actualiza el perfil tras iniciar sesión. Devuelve el perfil y si es un alta nueva. */
-export async function upsertProfileOnLogin(
-  user: { uid: string; email: string; name: string; photoURL?: string | null; provider?: string },
-  countLogin: boolean,
-): Promise<{ profile: UserProfile; isNew: boolean }> {
-  const now = Date.now();
-  const existing = await getProfile(user.uid);
-  if (!existing) {
-    const profile: UserProfile = stripUndefined({
-      uid: user.uid,
-      email: user.email,
-      name: user.name || user.email.split("@")[0],
-      photoURL: user.photoURL ?? null,
-      provider: user.provider ?? "google.com",
-      createdAt: now,
-      lastLoginAt: now,
-      lastActiveAt: now,
-      loginCount: 1,
-      workoutsCount: 0,
-      onboarded: false,
-      blocked: false,
-      weeklyWorkoutsGoal: 3,
-    });
-    if (!firebaseEnabled) {
-      const db = readLocal();
-      db.users[user.uid] = profile;
-      writeLocal(db);
-    } else {
-      const { db } = getFirebase();
-      await setDoc(doc(db, "users", user.uid), profile);
-    }
-    return { profile, isNew: true };
-  }
-  const patch: Partial<UserProfile> = {
-    lastActiveAt: now,
-    name: existing.name || user.name,
-    photoURL: user.photoURL ?? existing.photoURL ?? null,
-    email: user.email || existing.email,
-  };
-  if (countLogin) {
-    patch.lastLoginAt = now;
-    patch.loginCount = (existing.loginCount ?? 0) + 1;
-  }
-  await updateProfile(user.uid, patch);
-  return { profile: { ...existing, ...patch }, isNew: false };
-}
-
-export async function updateProfile(uid: string, patch: Partial<UserProfile>) {
+export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<UserProfile | null> {
   const p = stripUndefined({ ...patch });
-  delete (p as Partial<UserProfile>).blocked; // solo un admin puede cambiarlo
-  if (!firebaseEnabled) {
+  delete (p as Partial<UserProfile>).blocked;
+  if (!backendEnabled) {
     const db = readLocal();
     if (db.users[uid]) db.users[uid] = { ...db.users[uid], ...p };
     writeLocal(db);
-    return;
+    return db.users[uid] ?? null;
   }
-  const { db } = getFirebase();
-  await updateDoc(doc(db, "users", uid), p);
-}
-
-export async function isAdminEmail(email: string | null | undefined): Promise<boolean> {
-  if (!email) return false;
-  if (!firebaseEnabled) return readLocal().admins.includes(email) || email === DEMO_USER.email;
-  if (ADMIN_EMAILS.includes(email.toLowerCase())) return true;
-  try {
-    const { db } = getFirebase();
-    const snap = await getDoc(doc(db, "admins", email.toLowerCase()));
-    return snap.exists();
-  } catch {
-    return false;
-  }
+  const r = await api<{ profile: UserProfile }>("/api/profile", { method: "PATCH", body: clean(p) });
+  return r.profile;
 }
 
 // ───────────────────────── entrenamientos ─────────────────────────
 
 export async function listWorkouts(uid: string): Promise<Workout[]> {
-  if (!firebaseEnabled) return [...localUserData(readLocal(), uid).workouts].sort((a, b) => b.date - a.date);
-  const { db } = getFirebase();
-  const snap = await getDocs(query(collection(db, "users", uid, "workouts"), orderBy("date", "desc"), qLimit(1000)));
-  return snap.docs.map((d) => ({ ...(d.data() as Workout), id: d.id }));
+  if (!backendEnabled) return [...localUserData(readLocal(), uid).workouts].sort((a, b) => b.date - a.date);
+  return api<Workout[]>("/api/workouts");
 }
 
 export async function saveWorkout(uid: string, w: Workout) {
-  const stats = workoutStats(w);
-  const workout = clean({ ...w, ...stats });
-  if (!firebaseEnabled) {
+  const workout = clean({ ...w, ...workoutStats(w) });
+  if (!backendEnabled) {
     const db = readLocal();
     const data = localUserData(db, uid);
     data.workouts = [workout, ...data.workouts.filter((x) => x.id !== w.id)];
@@ -176,13 +165,11 @@ export async function saveWorkout(uid: string, w: Workout) {
     writeLocal(db);
     return workout;
   }
-  const { db } = getFirebase();
-  await setDoc(doc(db, "users", uid, "workouts", w.id), workout);
-  return workout;
+  return api<Workout>(`/api/workouts/${encodeURIComponent(w.id)}`, { method: "PUT", body: workout });
 }
 
 export async function deleteWorkout(uid: string, id: string) {
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     const data = localUserData(db, uid);
     data.workouts = data.workouts.filter((x) => x.id !== id);
@@ -190,115 +177,88 @@ export async function deleteWorkout(uid: string, id: string) {
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  await deleteDoc(doc(db, "users", uid, "workouts", id));
+  await api(`/api/workouts/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // ───────────────────────── peso y medidas ─────────────────────────
 
 export async function listBodyLogs(uid: string): Promise<BodyLog[]> {
-  if (!firebaseEnabled) return [...localUserData(readLocal(), uid).body].sort((a, b) => a.date.localeCompare(b.date));
-  const { db } = getFirebase();
-  const snap = await getDocs(query(collection(db, "users", uid, "body"), orderBy("date", "asc"), qLimit(2000)));
-  return snap.docs.map((d) => d.data() as BodyLog);
+  if (!backendEnabled) return [...localUserData(readLocal(), uid).body].sort((a, b) => a.date.localeCompare(b.date));
+  return api<BodyLog[]>("/api/body");
 }
 
 export async function saveBodyLog(uid: string, log: BodyLog) {
   const l = clean(log);
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     const data = localUserData(db, uid);
     data.body = [...data.body.filter((x) => x.id !== l.id), l];
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  await setDoc(doc(db, "users", uid, "body", l.id), l);
+  await api(`/api/body/${l.date}`, { method: "PUT", body: l });
 }
 
 export async function deleteBodyLog(uid: string, id: string) {
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     const data = localUserData(db, uid);
     data.body = data.body.filter((x) => x.id !== id);
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  await deleteDoc(doc(db, "users", uid, "body", id));
+  await api(`/api/body/${id}`, { method: "DELETE" });
 }
 
 // ───────────────────────── nutrición ─────────────────────────
 
 export async function getNutritionDay(uid: string, date: string): Promise<NutritionDay> {
   const empty: NutritionDay = { id: date, date, entries: [], waterMl: 0 };
-  if (!firebaseEnabled) return localUserData(readLocal(), uid).nutrition[date] ?? empty;
-  const { db } = getFirebase();
-  const snap = await getDoc(doc(db, "users", uid, "nutrition", date));
-  return snap.exists() ? (snap.data() as NutritionDay) : empty;
+  if (!backendEnabled) return localUserData(readLocal(), uid).nutrition[date] ?? empty;
+  return api<NutritionDay>(`/api/nutrition/${date}`);
 }
 
 export async function saveNutritionDay(uid: string, day: NutritionDay) {
   const d = clean(day);
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     localUserData(db, uid).nutrition[d.id] = d;
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  await setDoc(doc(db, "users", uid, "nutrition", d.id), d);
+  await api(`/api/nutrition/${d.date}`, { method: "PUT", body: d });
 }
 
 export async function listNutritionDays(uid: string, fromDate: string): Promise<NutritionDay[]> {
-  if (!firebaseEnabled)
+  if (!backendEnabled)
     return Object.values(localUserData(readLocal(), uid).nutrition)
       .filter((d) => d.date >= fromDate)
       .sort((a, b) => a.date.localeCompare(b.date));
-  const { db } = getFirebase();
-  const snap = await getDocs(query(collection(db, "users", uid, "nutrition"), where("date", ">=", fromDate), orderBy("date", "asc")));
-  return snap.docs.map((d) => d.data() as NutritionDay);
+  return api<NutritionDay[]>(`/api/nutrition?from=${fromDate}`);
 }
 
 // ───────────────────────── exportar / borrar cuenta ─────────────────────────
 
 export async function exportUserData(uid: string) {
-  const [profile, workouts, body, nutrition] = await Promise.all([
-    getProfile(uid),
-    listWorkouts(uid),
-    listBodyLogs(uid),
-    listNutritionDays(uid, "0000-00-00"),
-  ]);
-  return { exportedAt: new Date().toISOString(), profile, workouts, body, nutrition };
+  if (backendEnabled) return api("/api/export");
+  const data = localUserData(readLocal(), uid);
+  return { exportedAt: new Date().toISOString(), profile: readLocal().users[uid], ...data };
 }
 
 export async function deleteUserData(uid: string) {
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     delete db.users[uid];
     delete db.data[uid];
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  for (const sub of ["workouts", "body", "nutrition"]) {
-    const snap = await getDocs(collection(db, "users", uid, sub));
-    let batch = writeBatch(db);
-    let n = 0;
-    for (const d of snap.docs) {
-      batch.delete(d.ref);
-      if (++n % 400 === 0) {
-        await batch.commit();
-        batch = writeBatch(db);
-      }
-    }
-    await batch.commit();
-  }
-  await deleteDoc(doc(db, "users", uid));
+  await api("/api/account", { method: "DELETE" });
 }
 
 // ───────────────────────── eventos / analítica ─────────────────────────
 
+/** Registra visitas y errores de la app. Los accesos (login/registro/salida) los registra el servidor. */
 export async function logEvent(e: Omit<AppEvent, "ts" | "ua" | "path"> & { path?: string }) {
   const evt: AppEvent = stripUndefined({
     ...e,
@@ -308,14 +268,20 @@ export async function logEvent(e: Omit<AppEvent, "ts" | "ua" | "path"> & { path?
     message: e.message?.slice(0, 500),
   });
   try {
-    if (!firebaseEnabled) {
+    if (!backendEnabled) {
       const db = readLocal();
       db.events.push({ ...evt, id: newId() });
       writeLocal(db);
       return;
     }
-    const { db } = getFirebase();
-    await addDoc(collection(db, "events"), evt);
+    if (["signup", "login", "logout"].includes(evt.type)) return;
+    await fetch("/api/events", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: evt.type, code: evt.code, message: evt.message, path: evt.path, ref: evt.ref }),
+      keepalive: true,
+    });
   } catch {
     // la analítica nunca debe romper la app
   }
@@ -324,43 +290,76 @@ export async function logEvent(e: Omit<AppEvent, "ts" | "ua" | "path"> & { path?
 // ───────────────────────── administración ─────────────────────────
 
 export async function adminListUsers(): Promise<UserProfile[]> {
-  if (!firebaseEnabled) return Object.values(readLocal().users).sort((a, b) => b.createdAt - a.createdAt);
-  const { db } = getFirebase();
-  const snap = await getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), qLimit(2000)));
-  return snap.docs.map((d) => d.data() as UserProfile);
+  if (!backendEnabled) return Object.values(readLocal().users).sort((a, b) => b.createdAt - a.createdAt);
+  return api<UserProfile[]>("/api/admin/users");
 }
 
-export async function adminListEvents(sinceTs: number, max = 3000): Promise<AppEvent[]> {
-  if (!firebaseEnabled)
+export async function adminListEvents(sinceTs: number): Promise<AppEvent[]> {
+  if (!backendEnabled)
     return readLocal()
       .events.filter((e) => e.ts >= sinceTs)
-      .sort((a, b) => b.ts - a.ts)
-      .slice(0, max);
-  const { db } = getFirebase();
-  const snap = await getDocs(query(collection(db, "events"), where("ts", ">=", sinceTs), orderBy("ts", "desc"), qLimit(max)));
-  return snap.docs.map((d) => ({ ...(d.data() as AppEvent), id: d.id }));
+      .sort((a, b) => b.ts - a.ts);
+  return api<AppEvent[]>(`/api/admin/events?since=${sinceTs}`);
+}
+
+export async function adminUserWorkouts(uid: string): Promise<Workout[]> {
+  if (!backendEnabled) return listWorkouts(uid);
+  return api<Workout[]>(`/api/admin/users/${encodeURIComponent(uid)}/workouts`);
 }
 
 export async function adminSetBlocked(uid: string, blocked: boolean) {
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     if (db.users[uid]) db.users[uid].blocked = blocked;
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  await updateDoc(doc(db, "users", uid), { blocked });
+  await api(`/api/admin/users/${encodeURIComponent(uid)}`, { method: "PATCH", body: { blocked } });
+}
+
+export async function adminSetRole(uid: string, role: "admin" | "user") {
+  if (!backendEnabled) return;
+  await api(`/api/admin/users/${encodeURIComponent(uid)}`, { method: "PATCH", body: { role } });
 }
 
 export async function adminDeleteEvent(id: string) {
-  if (!firebaseEnabled) {
+  if (!backendEnabled) {
     const db = readLocal();
     db.events = db.events.filter((e) => e.id !== id);
     writeLocal(db);
     return;
   }
-  const { db } = getFirebase();
-  await deleteDoc(doc(db, "events", id));
+  await api(`/api/admin/events/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export interface AdminSystem {
+  backend: string;
+  ai: boolean;
+  model: string;
+  aiDailyLimit: number;
+  aiRequests30d: number;
+  aiTokens30d: number;
+  activeSessions: number;
+  adminEmails: string[];
+}
+
+export async function adminSystem(): Promise<AdminSystem | null> {
+  if (!backendEnabled) return null;
+  return api<AdminSystem>("/api/admin/system");
+}
+
+export interface AuditEntry {
+  id: number;
+  ts: number;
+  actor_email: string;
+  action: string;
+  target: string | null;
+  detail: string | null;
+}
+
+export async function adminAudit(): Promise<AuditEntry[]> {
+  if (!backendEnabled) return [];
+  return api<AuditEntry[]>("/api/admin/audit");
 }
 
 // ───────────────────────── datos de ejemplo (solo modo demo) ─────────────────────────

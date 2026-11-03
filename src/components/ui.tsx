@@ -183,7 +183,7 @@ export function Tabs<T extends string>({
           aria-selected={value === it.value}
           onClick={() => onChange(it.value)}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+            "shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
             value === it.value ? "bg-surface-3 text-ink shadow-sm" : "text-muted hover:text-ink",
           )}
         >

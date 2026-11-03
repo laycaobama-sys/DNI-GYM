@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight, Check, Droplets, Flame, ListChecks, Play, Plus, Scale, Trophy, Utensils } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Droplets, Flame, ListChecks, Play, Plus, Scale, Sparkles, Trophy, Utensils } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useData } from "@/components/data-provider";
 import { usePlayer } from "@/components/workout-player";
@@ -109,7 +109,7 @@ export default function DashboardPage() {
         </span>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] lg:gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr] lg:gap-6">
         {/* entreno de hoy */}
         <div className="relative min-h-[300px] overflow-hidden rounded-3xl border border-white/10 bg-surface sm:min-h-[340px]">
           <Image src={ROUTINE_COVER(routine.slug)} alt="" fill priority sizes="(max-width: 1024px) 100vw, 60vw" className="object-cover" />
@@ -130,7 +130,7 @@ export default function DashboardPage() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <button
                   onClick={() => player.start(routineDaySession(routine, next.index))}
-                  className="inline-flex h-12 items-center gap-2 rounded-2xl bg-accent px-6 font-athletic text-lg font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(198_255_61/0.8)] active:scale-[0.98]"
+                  className="inline-flex h-12 items-center gap-2 rounded-2xl bg-accent px-6 font-athletic text-lg font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(255_107_26/0.8)] active:scale-[0.98]"
                 >
                   <Play className="size-4 fill-current" /> Empezar
                 </button>
@@ -147,7 +147,7 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold">Tu actividad</p>
           <div className="mt-4 flex items-center gap-5">
             <div className="relative size-36 shrink-0">
-              <Ring pct={s.thisWeek / weeklyGoal} color="#c6ff3d" size={144} stroke={12} />
+              <Ring pct={s.thisWeek / weeklyGoal} color="#ff6b1a" size={144} stroke={12} />
               <Ring pct={s.minutes / minutesGoal} color="#4cc3ff" size={110} stroke={12} />
               <Ring pct={kcal / kcalGoal} color="#ff8a3d" size={76} stroke={12} />
             </div>
@@ -186,6 +186,19 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      <Link href="/panel/coach" className="group flex items-center gap-4 rounded-3xl border border-accent/30 bg-gradient-to-r from-accent/[0.14] to-surface p-4 transition-colors hover:border-accent/60 sm:p-5">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent text-accent-ink">
+          <Sparkles className="size-6" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-lg font-semibold">DNI AI Coach</span>
+          <span className="block text-sm text-ink-2">
+            {workouts.length ? "Analiza tu progreso, crea tu entreno de hoy o pregúntale qué comer." : "Pídele que cree tu primer entreno según tu objetivo."}
+          </span>
+        </span>
+        <ArrowRight className="size-5 shrink-0 text-accent transition-transform group-hover:translate-x-1" />
+      </Link>
 
       {/* semana */}
       <Card className="p-4 sm:p-5">
@@ -277,7 +290,7 @@ export default function DashboardPage() {
             Ver todos
           </Link>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {nextAch.map((a) => {
             return (
               <div key={a.id} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3">
@@ -297,7 +310,7 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
         <Card>
           <CardHeader title="Volumen semanal" subtitle="Kilos totales levantados (peso × repeticiones)" />
           <div className="p-3 pt-4">
@@ -324,7 +337,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
         <Card>
           <CardHeader title="Últimos entrenos" action={<Link href="/panel/historial" className="text-sm font-medium text-accent">Historial</Link>} />
           <ul className="divide-y divide-line px-5 pb-2 pt-2">

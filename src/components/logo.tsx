@@ -5,8 +5,8 @@ const D_PATH =
 
 /** Monograma de DNI GYM: «D» itálica con corte de velocidad. */
 export function LogoMark({ className = "size-9", inverted }: { className?: string; inverted?: boolean }) {
-  const bg = inverted ? "#0b0d0f" : "#c6ff3d";
-  const fg = inverted ? "#c6ff3d" : "#0b1000";
+  const bg = inverted ? "#0b0d0f" : "#ff6b1a";
+  const fg = inverted ? "#ff6b1a" : "#160700";
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <rect width="64" height="64" rx="15" fill={bg} />

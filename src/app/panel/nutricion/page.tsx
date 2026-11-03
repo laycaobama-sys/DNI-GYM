@@ -105,7 +105,7 @@ export default function NutritionPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
             <div className="relative mx-auto grid size-40 shrink-0 place-items-center">
@@ -203,7 +203,7 @@ export default function NutritionPage() {
           <Spinner />
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {MEALS.map((m) => {
             const entries = day.entries.filter((e) => e.meal === m.id);
             const kcal = entries.reduce((a, e) => a + e.kcal, 0);

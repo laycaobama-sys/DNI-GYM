@@ -11,7 +11,7 @@ export default function PanelChallengesPage() {
   return (
     <div>
       <PageHeader title="Retos de 30 días" subtitle="Un entreno corto al día, sin material, que sube de nivel contigo" />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {CHALLENGES.map((c) => {
           const done = profile?.challenges?.[c.slug]?.length ?? 0;
           return (

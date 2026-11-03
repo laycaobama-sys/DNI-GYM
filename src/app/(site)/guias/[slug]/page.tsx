@@ -129,7 +129,7 @@ export default async function GuidePage({ params }: PageProps<"/guias/[slug]">) 
         {links.length > 0 && (
           <section className="mt-14">
             <h2 className="font-display text-xl font-semibold">Pásalo a la práctica</h2>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {links.map((l) => (
                 <Link key={l.href} href={l.href} className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-accent/40">
                   <span>

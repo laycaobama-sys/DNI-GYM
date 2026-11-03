@@ -99,7 +99,7 @@ export default function ExplorePage() {
       <section id="programas" className="scroll-mt-24">
         <h2 className="font-athletic text-3xl font-extrabold uppercase italic">Programas completos</h2>
         <p className="mt-1 text-sm text-muted">Elige tu programa: «Tu entreno de hoy» seguirá su orden automáticamente.</p>
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
           {ROUTINES.map((r) => {
             const active = r.slug === current.slug;
             return (

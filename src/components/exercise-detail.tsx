@@ -69,7 +69,7 @@ export function ExerciseSteps({ e, headingLevel = 2 }: { e: Exercise; headingLev
           ))}
         </ol>
       </section>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <section className="rounded-2xl border border-good/20 bg-good/[0.05] p-5">
           <H className="flex items-center gap-2 font-semibold text-good">
             <Lightbulb className="size-4" /> Consejos

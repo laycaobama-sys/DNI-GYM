@@ -43,3 +43,6 @@ next-env.d.ts
 
 # wrangler
 .wrangler/
+
+# secretos locales de wrangler
+.dev.vars

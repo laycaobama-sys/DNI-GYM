@@ -28,6 +28,7 @@ export interface UserProfile {
   fatGoal?: number;
   waterGoal?: number;
   demo?: boolean;
+  role?: "admin" | "user";
   // ── personalización (cuestionario de bienvenida) ──
   level?: "principiante" | "intermedio" | "avanzado";
   place?: "gimnasio" | "casa";

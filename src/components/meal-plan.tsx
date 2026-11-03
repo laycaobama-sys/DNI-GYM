@@ -47,9 +47,9 @@ export function MealPlan({
             Menú <ArrowRight className="size-4" />
           </Link>
         </div>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {plan.meals.map((m) => (
-            <li key={m.slot} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3">
+            <li key={m.slot} className="flex min-w-0 items-center gap-3 rounded-2xl bg-white/[0.03] p-3">
               <span className={cn("grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold", logged.has(m.slot) ? "bg-accent text-accent-ink" : "bg-white/5 text-muted")}>
                 {logged.has(m.slot) ? <Check className="size-4" /> : m.time.slice(0, 2)}
               </span>
@@ -80,7 +80,7 @@ export function MealPlan({
         <Lightbulb className="size-5 shrink-0 text-accent" />
         {nutritionTip(profile, Boolean(trainedToday))}
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {plan.meals.map((m) => {
           const done = logged.has(m.slot);
           return (
