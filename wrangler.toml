@@ -17,6 +17,7 @@ not_found_handling = "404-page"
 [[d1_databases]]
 binding = "DB"
 database_name = "dni-gym-db"
+database_id = "5ac6b3cc-f614-4c9c-8c92-2f0ab0bcff31"
 
 [vars]
 FIREBASE_PROJECT_ID = "dni-gym-c6fa2"
