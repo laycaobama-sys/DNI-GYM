@@ -24,7 +24,7 @@ export default function CookiesPage() {
       <h2>2. Almacenamiento local</h2>
       <p>Guardamos en tu navegador el entrenamiento en curso, tus preferencias y una copia para que la app funcione sin conexión. Puedes borrarlo desde la configuración de tu navegador.</p>
       <h2>3. Medición propia y anónima</h2>
-      <p>Contamos visitas de forma agregada en nuestros propios servidores (Cloudflare) para saber qué páginas se usan, sin cookies de terceros ni perfiles publicitarios.</p>
+      <p>Contamos visitas de forma agregada con nuestros propios servidores y con Cloudflare Web Analytics, que no usa cookies ni identifica a las personas, para saber qué páginas se usan y cómo de rápido cargan.</p>
       <h2>4. Cambios</h2>
       <p>Si en el futuro añadimos cookies que requieran consentimiento, te lo pediremos antes de usarlas. Dudas: <a href="mailto:privacidad@dnigym.com">privacidad@dnigym.com</a>.</p>
     </Legal>
