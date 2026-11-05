@@ -1,3 +1,4 @@
+import { seoDesc, seoTitle } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: PageProps<"/calculadoras/[slu
   const { slug } = await params;
   const c = getCalculator(slug);
   if (!c) return {};
-  return { title: c.title, description: c.description, alternates: { canonical: `/calculadoras/${c.slug}` } };
+  return { title: seoTitle(c.title), description: seoDesc(c.description), alternates: { canonical: `/calculadoras/${c.slug}` } };
 }
 
 export default async function CalculatorPage({ params }: PageProps<"/calculadoras/[slug]">) {

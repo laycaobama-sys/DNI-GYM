@@ -6,7 +6,9 @@ export const SITE = {
   title: "DNI GYM · Tu entrenador personal gratis para el gym y en casa",
   tagline: "Tu entrenador personal gratis · Gym y casa",
   description:
-    "DNI GYM es tu entrenador personal gratis: plan de entreno y de comidas personalizado según tu objetivo, entreno guiado para gimnasio o en casa sin material, 148 ejercicios con técnica, registro con un toque, récords, rachas y progreso. Entra con Google y empieza hoy.",
+    "DNI GYM es tu entrenador personal gratis: plan de entreno y de comidas personalizado según tu objetivo, entreno guiado para gimnasio o en casa sin material, 148 ejercicios con técnica y variantes, coach con IA, registro con un toque, récords, rachas y progreso. Crea tu cuenta gratis y empieza hoy.",
+  /** versión corta para la meta description (≤ 155 caracteres) */
+  metaDescription: "Entrenador personal gratis con IA: plan de entreno y comidas a tu medida, 148 ejercicios con técnica y rutinas para gimnasio o casa. Crea tu cuenta gratis.",
   keywords: [
     "entrenador personal gratis",
     "entrenador personal online",
@@ -36,6 +38,25 @@ export const SITE = {
     "app para perder grasa",
   ],
 };
+
+/** Título SEO corto (≤ 50 caracteres + « | DNI GYM»): corta por «:» o por « para » en preguntas, o por palabras. */
+export function seoTitle(t: string, max = 50) {
+  if (t.length <= max) return t;
+  const colon = t.split(":")[0].trim();
+  if (colon.length <= max && colon.length >= 12) return colon;
+  if (t.endsWith("?") && t.includes(" para ")) {
+    const q = `${t.split(" para ")[0].trim()}?`;
+    if (q.length <= max) return q;
+  }
+  return t.slice(0, max).replace(/\s+\S*$/, "");
+}
+
+/** Meta description de 120–155 caracteres cortada por palabra completa. */
+export function seoDesc(d: string, max = 155) {
+  const s = d.replace(/\s+/g, " ").trim();
+  if (s.length <= max) return s;
+  return `${s.slice(0, max - 1).replace(/[\s,;:.]+\S*$/, "")}…`;
+}
 
 export const absoluteUrl = (path = "/") => `${SITE.url}${path.startsWith("/") ? path : `/${path}`}`;
 

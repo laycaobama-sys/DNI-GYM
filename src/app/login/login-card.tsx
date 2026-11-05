@@ -121,7 +121,7 @@ export function LoginCard() {
           <Logo />
         </div>
         <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-10 pt-28 lg:py-12">
-          <h1 className="font-athletic text-5xl font-extrabold uppercase italic leading-[0.92]">
+          <h2 className="font-athletic text-5xl font-extrabold uppercase italic leading-[0.92]">
             {t.h}
             {mode !== "signup" && (
               <>
@@ -129,7 +129,7 @@ export function LoginCard() {
                 <span className="text-accent">{mode === "forgot" ? "tu acceso" : "DNI GYM"}</span>
               </>
             )}
-          </h1>
+          </h2>
           <p className="mt-2 text-ink-2">{t.p}</p>
 
           {mode !== "forgot" && (

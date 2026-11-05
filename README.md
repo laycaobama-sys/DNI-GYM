@@ -43,6 +43,25 @@ npm run test:gemini              # comprueba la clave de Gemini sin coste (lista
 
 `npm run dev` (Next en :3000) sirve para trabajar el diseño; con `NEXT_PUBLIC_DEMO_MODE=1` usa datos de ejemplo guardados solo en el navegador (nunca en producción).
 
+## Centro de control del dueño (`/admin`)
+
+Solo para administradores (el servidor lo comprueba en cada petición):
+
+- **Resumen:** KPI en vivo (usuarios, activos, retención D7/D30, activación, entrenos, visitas, IA, errores), registros y activos por día, embudo de conversión, dispositivos, método de acceso, objetivos, orígenes, páginas de entrada, ejercicios más entrenados, horas de actividad y últimos registros. Periodo 7/30/90 días.
+- **CRM:** etapas automáticas (nuevo, activo, en riesgo, inactivo, bloqueado), salud 0–100, etiquetas, notas internas, exportar CSV y análisis de cada cliente con IA.
+- **Agentes IA** (Gemini 2.5 Flash): retención, crecimiento, soporte técnico, contenido SEO/AEO e inventario. Solo aconsejan y redactan; no cambian datos.
+- **Stock:** productos, entradas/salidas con motivo, mínimos con aviso, valor de coste y de venta, historial.
+- **Usuarios, Actividad, Errores y Sistema:** bloqueo, roles, enlaces de contraseña de un solo uso, auditoría y estado de la configuración.
+
+## Cuando compres el dominio propio
+
+1. Cloudflare → Domain Registration → compra el dominio (queda en tu cuenta).
+2. Worker `dni-gym` → Settings → Domains & Routes → Add → Custom domain → tu dominio.
+3. En `src/lib/site.ts` cambia la URL por defecto (o define `NEXT_PUBLIC_SITE_URL` en las variables de build) para que el sitemap, las URL canónicas y `llms.txt` usen el dominio nuevo.
+4. Google Cloud → Credenciales → tu cliente OAuth → añade `https://TU-DOMINIO/api/auth/google/callback`.
+5. Cloudflare → Turnstile → «DNI GYM» → añade el dominio.
+6. Opcional: activa Email Service con el dominio para enviar automáticamente los correos de recuperación de contraseña.
+
 ## 4. Qué incluye
 
 | Área | Rutas | Detalle |

@@ -1,3 +1,4 @@
+import { seoDesc, seoTitle } from "@/lib/site";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,8 +21,8 @@ export async function generateMetadata({ params }: PageProps<"/guias/[slug]">): 
   const g = getGuide(slug);
   if (!g) return {};
   return {
-    title: g.title,
-    description: g.description,
+    title: seoTitle(g.title),
+    description: seoDesc(g.description),
     alternates: { canonical: `/guias/${g.slug}` },
     openGraph: { type: "article", title: g.title, description: g.description, images: [{ url: g.cover }] },
   };

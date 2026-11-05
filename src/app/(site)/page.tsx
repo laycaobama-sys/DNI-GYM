@@ -32,6 +32,11 @@ import { StickyCta } from "@/components/landing/sticky-cta";
 import { buttonClass } from "@/lib/cn";
 import { SITE, absoluteUrl } from "@/lib/site";
 import { HOME_FAQ } from "./faq";
+import fs from "node:fs";
+import path from "node:path";
+
+// Si existe public/brand/hero.mp4 (p. ej. generado con Google Veo), la portada lo usa como fondo en bucle.
+const HERO_VIDEO = fs.existsSync(path.join(process.cwd(), "public/brand/hero.mp4"));
 
 function SectionTitle({ eyebrow, title, text, center }: { eyebrow: string; title: React.ReactNode; text?: string; center?: boolean }) {
   return (
@@ -66,9 +71,9 @@ export default function HomePage() {
     applicationSubCategory: "Fitness",
     operatingSystem: "Web, Android, iOS",
     inLanguage: "es",
-    description: SITE.description,
+    description: SITE.metaDescription,
     offers: { "@type": "Offer", price: "0", priceCurrency: "EUR", availability: "https://schema.org/InStock" },
-    featureList: FEATURES.map((f) => f.title),
+    featureList: ["DNI AI Coach: entrenador personal con inteligencia artificial", ...FEATURES.map((f) => f.title)],
     publisher: { "@id": absoluteUrl("/#organization") },
   };
   const faqLd = {
@@ -90,7 +95,11 @@ export default function HomePage() {
       <section className="relative -mt-16 overflow-hidden bg-black">
         <div className="absolute inset-0 lg:left-[30%]">
           <div className="grain absolute inset-0 lg:[mask-image:linear-gradient(to_right,transparent,black_35%)]">
-            <Image src="/brand/hero.webp" alt="Atleta entrenando con disco en el gimnasio" fill priority sizes="(max-width: 1024px) 100vw, 62vw" className="animate-ken object-cover object-[30%_20%]" />
+            {HERO_VIDEO ? (
+              <video className="absolute inset-0 size-full object-cover object-[30%_20%]" src="/brand/hero.mp4" poster="/brand/hero.webp" autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
+            ) : (
+              <Image src="/brand/hero.webp" alt="Atleta entrenando con disco en el gimnasio" fill priority sizes="(max-width: 1024px) 100vw, 62vw" className="animate-ken object-cover object-[30%_20%]" />
+            )}
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-black/10 lg:via-black/30" />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-black/30 to-black/60" />
@@ -216,6 +225,60 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══════════ DNI AI COACH ═══════════ */}
+      <section id="coach" className="relative scroll-mt-20 overflow-hidden py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[480px] bg-[radial-gradient(60%_60%_at_70%_20%,rgb(255_107_26/0.18),transparent_70%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
+          <div>
+            <SectionTitle
+              eyebrow="Nuevo · DNI AI Coach"
+              title={<>Tu coach con IA.<br /><span className="text-accent">Conoce tus datos.</span></>}
+              text="Pregúntale lo que quieras: qué entrenar hoy si solo tienes 30 minutos, cuánto peso usar, qué cenar según lo que has comido o si estás progresando. Responde con tus entrenos, récords y comidas reales, y crea tu sesión del día con ejercicios del catálogo."
+            />
+            <ul className="mt-8 space-y-3 text-sm text-ink-2">
+              {["Crea el entreno de hoy según tu tiempo, lugar y molestias", "Analiza tu progreso con tus récords reales", "Te sugiere comidas según tus macros del día", "Tú decides: nunca cambia nada sin tu permiso"].map((t) => (
+                <li key={t} className="flex items-start gap-3">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-accent text-accent-ink"><Check className="size-3.5" /></span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <Link href="/login?modo=registro" className="mt-9 inline-flex h-13 items-center gap-2 rounded-2xl bg-accent px-7 py-3.5 font-athletic text-lg font-extrabold uppercase italic text-accent-ink shadow-[0_10px_40px_-10px_rgb(255_107_26/0.7)] transition hover:bg-accent-2">
+              Probar el coach gratis <ArrowRight className="size-5" />
+            </Link>
+          </div>
+          <div className="relative mx-auto w-full max-w-md" aria-label="Ejemplo de conversación con DNI AI Coach">
+            <div className="glass rounded-3xl p-4 shadow-2xl sm:p-5">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink"><Sparkles className="size-5" /></span>
+                <div>
+                  <p className="text-sm font-semibold">DNI AI Coach</p>
+                  <p className="flex items-center gap-1.5 text-xs text-good"><span className="size-1.5 rounded-full bg-good" /> En línea</p>
+                </div>
+              </div>
+              <div className="space-y-3 py-4 text-sm">
+                <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-accent-ink">Hoy solo tengo 30 minutos y estoy en casa con unas mancuernas. ¿Qué hago?</p>
+                <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-white/[0.06] px-4 py-3 leading-relaxed text-ink-2">
+                  <p>Como el martes hiciste pierna, hoy toca <strong className="text-ink">torso</strong>. Te propongo:</p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5">
+                    <li>Press de banca con mancuernas · 4 × 10</li>
+                    <li>Remo a una mano · 4 × 10 por lado</li>
+                    <li>Press de hombro · 3 × 10</li>
+                    <li>Flexiones diamante · 3 × máx.</li>
+                  </ol>
+                  <p className="mt-2">Descansos de 60 s y ¡listo en 30 min! ¿Lo empezamos?</p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="rounded-full bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent">▶ Empezar entreno</span>
+                  <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs text-ink-2">Cambiar ejercicios</span>
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-center text-xs text-muted">Ejemplo ilustrativo. Orientativo: no sustituye el consejo médico.</p>
+          </div>
+        </div>
+      </section>
+
       {/* ═══════════ PROGRAMAS Y RETOS ═══════════ */}
       <section className="py-20 sm:py-28">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 px-4 sm:px-6 md:flex-row md:items-end">
@@ -317,7 +380,7 @@ export default function HomePage() {
           <div className="relative overflow-hidden rounded-[2rem] border border-line bg-surface">
             <div className="grid items-center lg:grid-cols-2">
               <div className="p-8 sm:p-12">
-                <SectionTitle eyebrow="Donde quieras" title={<>Móvil, tablet <span className="text-accent">y PC</span></>} text="Empieza en el ordenador, entrena con el móvil y revisa tu progreso en la tablet. Todo sincronizado al instante con tu cuenta de Google." />
+                <SectionTitle eyebrow="Donde quieras" title={<>Móvil, tablet <span className="text-accent">y PC</span></>} text="Empieza en el ordenador, entrena con el móvil y revisa tu progreso en la tablet. Todo sincronizado al instante y guardado de forma segura en la nube." />
                 <div className="mt-8 flex flex-wrap gap-3">
                   {[[Smartphone, "Móvil"], [Tablet, "Tablet"], [Laptop, "Ordenador"], [ShieldCheck, "Datos privados"]].map(([I, l]) => {
                     const Icon = I as typeof Smartphone;

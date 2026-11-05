@@ -1,3 +1,4 @@
+import { seoDesc, seoTitle } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -20,8 +21,8 @@ export async function generateMetadata({ params }: PageProps<"/ejercicios/[slug]
   const { slug } = await params;
   const e = getExercise(slug);
   if (!e) return {};
-  const title = `${e.name}: técnica correcta, músculos y errores comunes`;
-  const description = `Cómo hacer ${e.name.toLowerCase()} correctamente paso a paso. Trabaja ${e.primary.join(", ").toLowerCase()}. Series recomendadas: ${e.prescription}. Consejos y errores que debes evitar.`;
+  const title = seoTitle(`${e.name}: técnica y errores`);
+  const description = seoDesc(`Cómo hacer ${e.name.toLowerCase()} paso a paso: trabaja ${e.primary.join(", ").toLowerCase()}, series recomendadas ${e.prescription}, consejos, errores y variantes.`);
   return {
     title,
     description,

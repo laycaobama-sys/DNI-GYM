@@ -1,3 +1,4 @@
+import { seoDesc, seoTitle } from "@/lib/site";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/retos/[slug]">): 
   const { slug } = await params;
   const c = getChallenge(slug);
   if (!c) return {};
-  return { title: `${c.name}: plan día a día gratis`, description: `${c.description} Calendario completo de 30 días con ejercicios, repeticiones y descansos.`, alternates: { canonical: `/retos/${c.slug}` } };
+  return { title: seoTitle(`${c.name}: plan día a día gratis`), description: seoDesc(`${c.description} Calendario de 30 días con ejercicios, repeticiones y descansos.`), alternates: { canonical: `/retos/${c.slug}` } };
 }
 
 export default async function ChallengePage({ params }: PageProps<"/retos/[slug]">) {

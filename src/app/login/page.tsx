@@ -10,8 +10,11 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-bg" />}>
-      <LoginCard />
-    </Suspense>
+    <>
+      <h1 className="sr-only">Iniciar sesión o crear cuenta gratis en DNI GYM</h1>
+      <Suspense fallback={<div className="min-h-screen bg-bg" />}>
+        <LoginCard />
+      </Suspense>
+    </>
   );
 }

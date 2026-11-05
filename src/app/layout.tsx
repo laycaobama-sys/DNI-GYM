@@ -12,7 +12,7 @@ const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"], display: 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: { default: SITE.title, template: `%s | ${SITE.name}` },
-  description: SITE.description,
+  description: SITE.metaDescription,
   keywords: SITE.keywords,
   applicationName: SITE.name,
   authors: [{ name: SITE.name, url: SITE.url }],
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     url: SITE.url,
     siteName: SITE.name,
     title: SITE.title,
-    description: SITE.description,
+    description: SITE.metaDescription,
   },
-  twitter: { card: "summary_large_image", title: SITE.title, description: SITE.description },
+  twitter: { card: "summary_large_image", title: SITE.title, description: SITE.metaDescription },
   robots: {
     index: true,
     follow: true,

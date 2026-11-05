@@ -1,3 +1,4 @@
+import { seoDesc, seoTitle } from "@/lib/site";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,8 +19,8 @@ export async function generateMetadata({ params }: PageProps<"/rutinas/[slug]">)
   const r = getRoutine(slug);
   if (!r) return {};
   return {
-    title: `${r.name}: rutina completa gratis (${r.daysPerWeek} días)`,
-    description: `${r.description} Nivel ${r.level}, objetivo ${r.goal}, ${r.daysPerWeek} días por semana, ~${r.minutes} minutos por sesión.`,
+    title: `${r.name} · rutina gratis ${r.daysPerWeek} días`.length <= 50 ? `${r.name} · rutina gratis ${r.daysPerWeek} días` : seoTitle(r.name),
+    description: seoDesc(`Rutina ${r.name} gratis: ${r.daysPerWeek} días por semana, ~${r.minutes} min, nivel ${r.level}, ${r.place}. ${r.description}`),
     alternates: { canonical: `/rutinas/${r.slug}` },
   };
 }

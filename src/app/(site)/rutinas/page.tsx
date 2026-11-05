@@ -1,12 +1,12 @@
+import { seoDesc } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock, MapPin } from "lucide-react";
 import { ROUTINES } from "@/data/routines";
 
 export const metadata: Metadata = {
-  title: "Rutinas de gimnasio gratis: principiantes, torso-pierna, PPL, glúteos y en casa",
-  description:
-    "Rutinas de gimnasio gratuitas y completas: Full Body para principiantes, Torso/Pierna 4 días, Push Pull Legs, glúteos y piernas, entrenamiento en casa sin material y quema grasa con HIIT. Con series, repeticiones y descansos.",
+  title: "Rutinas de gimnasio y en casa gratis",
+  description: seoDesc("Rutinas de gimnasio gratuitas y completas: Full Body para principiantes, Torso/Pierna 4 días, Push Pull Legs, glúteos y piernas, entrenamiento en casa sin material y quema grasa con HIIT. Con series, repeticiones y descansos."),
   alternates: { canonical: "/rutinas" },
 };
 

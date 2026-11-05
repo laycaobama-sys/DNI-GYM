@@ -1,3 +1,4 @@
+import { seoDesc } from "@/lib/site";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -5,8 +6,8 @@ import { ArrowUpRight } from "lucide-react";
 import { CHALLENGES } from "@/data/challenges";
 
 export const metadata: Metadata = {
-  title: "Retos de 30 días gratis: abdominales, glúteos, flexiones y cuerpo completo",
-  description: "Retos fitness de 30 días gratis para hacer en casa: reto abdominales, reto glúteos, reto flexiones y reto cuerpo completo. Entreno guiado diario con progresión.",
+  title: "Retos de 30 días gratis",
+  description: seoDesc("Retos fitness de 30 días gratis para hacer en casa: reto abdominales, reto glúteos, reto flexiones y reto cuerpo completo. Entreno guiado diario con progresión."),
   alternates: { canonical: "/retos" },
 };
 

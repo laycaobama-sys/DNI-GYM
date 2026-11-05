@@ -1,3 +1,4 @@
+import { seoDesc } from "@/lib/site";
 import type { Metadata } from "next";
 import { ExerciseBrowser } from "@/components/exercise-browser";
 import { JsonLd } from "@/components/json-ld";
@@ -6,7 +7,7 @@ import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Ejercicios de gimnasio con imágenes y técnica paso a paso",
-  description: `Biblioteca gratuita de ${EXERCISES.length} ejercicios de gimnasio y en casa con demostración visual, técnica correcta paso a paso, músculos trabajados, series recomendadas y errores comunes. Pecho, espalda, piernas, glúteos, hombros, brazos y abdomen.`,
+  description: seoDesc(`Biblioteca gratuita de ${EXERCISES.length} ejercicios de gimnasio y en casa con demostración visual, técnica correcta paso a paso, músculos trabajados, series recomendadas y errores comunes. Pecho, espalda, piernas, glúteos, hombros, brazos y abdomen.`),
   alternates: { canonical: "/ejercicios" },
   keywords: ["ejercicios de gimnasio", "ejercicios con imágenes", "técnica de ejercicios", "ejercicios para glúteos", "ejercicios de pecho", "ejercicios en casa"],
 };

@@ -1,5 +1,13 @@
 export const HOME_FAQ = [
   {
+    q: "¿DNI GYM tiene un entrenador personal con inteligencia artificial?",
+    a: "Sí. DNI AI Coach es un entrenador con IA (Google Gemini) que conoce tus entrenos, récords, peso y comidas reales. Te crea el entreno del día según tu tiempo, lugar y molestias, te dice cuánto peso usar y qué comer, y analiza si estás progresando. Es gratis y nunca cambia nada sin tu permiso.",
+  },
+  {
+    q: "¿Cuántos ejercicios y rutinas tiene DNI GYM?",
+    a: "Más de 140 ejercicios con imágenes, técnica paso a paso, errores comunes y variantes (barra, mancuernas, polea, máquina, kettlebell y peso corporal), 14 programas completos para gimnasio o casa y 4 retos de 30 días.",
+  },
+  {
     q: "¿DNI GYM me dice qué comer cada día?",
     a: "Sí. Según tu objetivo, tus calorías y tu tipo de alimentación (como de todo, vegetariana, vegana o sin lactosa), cada día te propone un menú de desayuno, comida, merienda y cena con cantidades en gramos. Puedes cambiar cualquier plato y añadirlo a tu diario con un toque.",
   },

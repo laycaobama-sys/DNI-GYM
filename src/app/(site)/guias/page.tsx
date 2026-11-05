@@ -1,3 +1,4 @@
+import { seoDesc } from "@/lib/site";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -5,8 +6,8 @@ import { ArrowUpRight, Clock } from "lucide-react";
 import { GUIDES } from "@/data/guides";
 
 export const metadata: Metadata = {
-  title: "Guías de entrenamiento y nutrición: respuestas claras basadas en evidencia",
-  description: "Guías gratuitas de gimnasio, entrenamiento en casa y nutrición: rutinas para principiantes, cuánta proteína tomar, cómo perder grasa sin perder músculo y qué comer antes y después de entrenar.",
+  title: "Guías de entrenamiento y nutrición",
+  description: seoDesc("Guías gratuitas de gimnasio, entrenamiento en casa y nutrición: rutinas para principiantes, cuánta proteína tomar, cómo perder grasa sin perder músculo y qué comer antes y después de entrenar."),
   alternates: { canonical: "/guias" },
 };
 
