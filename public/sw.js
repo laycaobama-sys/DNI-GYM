@@ -1,11 +1,11 @@
 /* DNI GYM · service worker: modo sin conexión.
    - Páginas: red primero (siempre la versión más reciente) y, sin cobertura, la última guardada.
    - Recursos estáticos e imágenes: caché primero y actualización en segundo plano.
-   La API (/api/*) nunca se guarda en caché: los datos del usuario siempre vienen de Cloudflare. */
-const VERSION = "dnigym-v3";
+   La API (/api/*) no pasa por aquí: la app guarda una copia local de tus datos y encola lo que guardes sin red. */
+const VERSION = "dnigym-v4";
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
-const PRECACHE = ["/", "/panel/", "/login/", "/logo.svg", "/icon-192.png"];
+const PRECACHE = ["/", "/panel/", "/panel/entrenar/", "/panel/nutricion/", "/panel/progreso/", "/panel/coach/", "/panel/perfil/", "/panel/ejercicios/", "/login/", "/bienvenida/", "/logo.svg", "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

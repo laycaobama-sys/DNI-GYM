@@ -16,6 +16,18 @@ export interface Env {
   /** Cloudflare Turnstile: clave pública (variable) y secreta (secret) */
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET?: string;
+  /** Cloudflare Email Service */
+  EMAIL?: SendEmail;
+  /** remitente, p. ej. "DNI GYM <hola@dnigym.com>" */
+  EMAIL_FROM?: string;
+  /** "1" para enviar correos a usuarios (requiere Workers Paid); los avisos al dueño siempre funcionan */
+  EMAIL_USERS?: string;
+  /** correo del dueño para avisos (dirección verificada en Email Routing) */
+  OWNER_EMAIL?: string;
+  /** URL pública canónica (https://dnigym.com) */
+  SITE_URL?: string;
+  /** hosts con la URL de retorno de Google registrada (separados por comas) */
+  GOOGLE_HOSTS?: string;
   /** SOLO desarrollo local (.dev.vars): permite /api/auth/dev */
   DEV_AUTH?: string;
 }

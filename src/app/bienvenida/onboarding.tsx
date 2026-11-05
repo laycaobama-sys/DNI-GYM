@@ -109,14 +109,16 @@ export function Onboarding() {
   const { saveBodyLog, latestWeight } = useData();
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [goal, setGoal] = useState<GoalChoice | null>(null);
+  const [goals, setGoals] = useState<GoalChoice[]>([]);
+  const goal: GoalChoice | null = goals[0] ?? null;
   const [sex, setSex] = useState<Sex | null>(profile?.sex ?? null);
   const [age, setAge] = useState(profile?.birthYear ? new Date().getFullYear() - profile.birthYear : 28);
   const [height, setHeight] = useState(profile?.heightCm ?? 172);
   const [weight, setWeight] = useState(latestWeight ?? 72);
   const [target, setTarget] = useState(profile?.targetWeight ?? latestWeight ?? 68);
   const [level, setLevel] = useState<LevelChoice | null>(profile?.level ?? null);
-  const [place, setPlace] = useState<"gimnasio" | "casa" | null>(profile?.place ?? null);
+  const [places, setPlaces] = useState<("gimnasio" | "casa")[]>(profile?.places ?? (profile?.place ? [profile.place] : []));
+  const place = places[0] ?? null;
   const [days, setDays] = useState(profile?.weeklyWorkoutsGoal ?? 3);
   const [areas, setAreas] = useState<string[]>(profile?.focusAreas ?? []);
   const [activity, setActivity] = useState<Activity>(profile?.activity ?? "ligero");
@@ -126,7 +128,7 @@ export function Onboarding() {
   const [saving, setSaving] = useState(false);
 
   const g: Goal = goal === "perder" ? "perder" : goal === "ganar" ? "ganar" : "mantener";
-  const partial: Partial<UserProfile> = { sex: sex ?? "hombre", birthYear: new Date().getFullYear() - age, heightCm: height, activity, goal: g, level: level ?? "principiante", place: place ?? "gimnasio", weeklyWorkoutsGoal: days, focusAreas: areas, diet, sessionMinutes: minutes };
+  const partial: Partial<UserProfile> = { sex: sex ?? "hombre", birthYear: new Date().getFullYear() - age, heightCm: height, activity, goal: g, level: level ?? "principiante", place: place ?? "gimnasio", weeklyWorkoutsGoal: days, focusAreas: areas, diet, sessionMinutes: minutes, goals, places };
   const nutrition = useMemo(() => computeNutritionGoals(partial, weight), [sex, age, height, activity, g, weight]); // eslint-disable-line react-hooks/exhaustive-deps
   const routine = useMemo(() => recommendRoutine(partial), [g, level, place, days, areas]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -159,11 +161,6 @@ export function Onboarding() {
     };
   }, [key]);
 
-  // al elegir una opción única, avanzar solo
-  const pick = <T,>(set: (v: T) => void, v: T) => {
-    set(v);
-    setTimeout(() => setStep((s) => s + 1), 280);
-  };
 
   const finish = async () => {
     setSaving(true);
@@ -204,14 +201,14 @@ export function Onboarding() {
       <main key={key} className="mx-auto w-full max-w-2xl flex-1 animate-fade-up px-4 pb-36 pt-6 sm:px-6">
         {key === "goal" && (
           <>
-            <Title sub={`Hola${profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}. Responde unas preguntas rápidas y crearemos tu plan personalizado.`}>¿Cuál es tu objetivo?</Title>
+            <Title sub={`Hola${profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}. Responde unas preguntas rápidas y crearemos tu plan personalizado. Puedes elegir hasta 2 objetivos.`}>¿Cuál es tu objetivo?</Title>
             <div className="grid grid-cols-2 gap-3">
               {GOALS.map((o) => (
                 <button
                   key={o.id}
-                  onClick={() => pick(setGoal, o.id)}
-                  aria-pressed={goal === o.id}
-                  className={cn("group relative aspect-[4/5] overflow-hidden rounded-3xl border text-left transition-all", goal === o.id ? "border-accent shadow-[0_0_0_2px_var(--color-accent)]" : "border-white/10")}
+                  onClick={() => setGoals((gs) => (gs.includes(o.id) ? gs.filter((x) => x !== o.id) : [...gs, o.id].slice(-2)))}
+                  aria-pressed={goals.includes(o.id)}
+                  className={cn("group relative aspect-[4/5] overflow-hidden rounded-3xl border text-left transition-all", goals.includes(o.id) ? "border-accent shadow-[0_0_0_2px_var(--color-accent)]" : "border-white/10")}
                 >
                   <Image src={o.img} alt="" fill sizes="(max-width: 640px) 50vw, 320px" className="object-cover transition-transform duration-700 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
@@ -219,9 +216,9 @@ export function Onboarding() {
                     <p className="font-athletic text-3xl font-extrabold uppercase italic leading-none">{o.title}</p>
                     <p className="mt-1 text-sm text-white/70">{o.text}</p>
                   </div>
-                  {goal === o.id && (
-                    <span className="absolute right-3 top-3 grid size-7 place-items-center rounded-full bg-accent text-accent-ink">
-                      <Check className="size-4" />
+                  {goals.includes(o.id) && (
+                    <span className="absolute right-3 top-3 grid size-7 place-items-center rounded-full bg-accent text-xs font-bold text-accent-ink">
+                      {goals.length > 1 ? goals.indexOf(o.id) + 1 : <Check className="size-4" />}
                     </span>
                   )}
                 </button>
@@ -235,7 +232,7 @@ export function Onboarding() {
             <Title sub="Lo usamos para calcular tu metabolismo y tus calorías.">¿Cuál es tu sexo?</Title>
             <div className="grid grid-cols-2 gap-3">
               {(["hombre", "mujer"] as Sex[]).map((v) => (
-                <Choice key={v} selected={sex === v} onClick={() => pick(setSex, v)} className="py-10 text-center">
+                <Choice key={v} selected={sex === v} onClick={() => setSex(v)} className="py-10 text-center">
                   <span className="font-athletic text-4xl font-extrabold uppercase italic">{v === "hombre" ? "Hombre" : "Mujer"}</span>
                 </Choice>
               ))}
@@ -271,7 +268,7 @@ export function Onboarding() {
             <Title>¿Cuál es tu nivel?</Title>
             <div className="space-y-3">
               {LEVELS.map((l) => (
-                <Choice key={l.id} selected={level === l.id} onClick={() => pick(setLevel, l.id)} className="flex w-full items-center gap-4 p-5">
+                <Choice key={l.id} selected={level === l.id} onClick={() => setLevel(l.id)} className="flex w-full items-center gap-4 p-5">
                   <span className="flex h-8 items-end gap-1">
                     {[1, 2, 3].map((b) => (
                       <span key={b} className={cn("w-2 rounded-sm", b <= l.bars ? "bg-accent" : "bg-white/10")} style={{ height: `${b * 33}%` }} />
@@ -289,13 +286,13 @@ export function Onboarding() {
 
         {key === "place" && (
           <>
-            <Title>¿Dónde vas a entrenar?</Title>
+            <Title sub="Puedes elegir los dos: te prepararemos entrenos para el gimnasio y para casa.">¿Dónde vas a entrenar?</Title>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { id: "gimnasio" as const, label: "Gimnasio", text: "Máquinas, barras y mancuernas", icon: Building2 },
                 { id: "casa" as const, label: "En casa", text: "Sin material o con poco equipo", icon: Home },
               ].map((o) => (
-                <Choice key={o.id} selected={place === o.id} onClick={() => pick(setPlace, o.id)} className="p-6">
+                <Choice key={o.id} selected={places.includes(o.id)} onClick={() => setPlaces((ps) => (ps.includes(o.id) ? ps.filter((x) => x !== o.id) : [...ps, o.id]))} className="p-6">
                   <o.icon className="size-8 text-accent" />
                   <p className="mt-4 font-athletic text-3xl font-extrabold uppercase italic">{o.label}</p>
                   <p className="text-sm text-muted">{o.text}</p>

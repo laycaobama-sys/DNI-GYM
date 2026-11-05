@@ -22,8 +22,22 @@ binding = "DB"
 database_name = "dni-gym-db"
 database_id = "5ac6b3cc-f614-4c9c-8c92-2f0ab0bcff31"
 
+# Correo (Cloudflare Email Service): avisos al dueño gratis; a usuarios con EMAIL_USERS = "1" (Workers Paid)
+[[send_email]]
+name = "EMAIL"
+
+# Tareas diarias: recordatorios, resumen semanal al dueño y limpieza (08:17 UTC)
+[triggers]
+crons = ["17 8 * * *"]
+
 [vars]
 ADMIN_EMAILS = "ibraguimova19@gmail.com"
+SITE_URL = "https://dnigym.com"
+OWNER_EMAIL = "ibraguimova19@gmail.com"
+EMAIL_FROM = "DNI GYM <hola@dnigym.com>"
+EMAIL_USERS = "0"
+# hosts con la URL de retorno de Google registrada en Google Cloud (añade dnigym.com cuando la registres)
+GOOGLE_HOSTS = "dni-gym.ibraguimova19.workers.dev"
 # Gemini 2.5 Flash: modelo del nivel gratuito de Google AI Studio
 GEMINI_MODEL = "gemini-2.5-flash"
 AI_DAILY_LIMIT = "30"

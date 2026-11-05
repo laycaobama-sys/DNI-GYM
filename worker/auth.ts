@@ -21,6 +21,11 @@ export interface UserRow {
   password_hash: string | null;
   email_verified: number;
   google_sub: string | null;
+  unsub_token?: string | null;
+  last_reminder_at?: number | null;
+  ai_limit?: number | null;
+  ai_blocked?: number;
+  plan?: string;
 }
 
 // ───────────────────────── utilidades ─────────────────────────
@@ -120,7 +125,12 @@ export async function verifyTurnstile(env: Env, token: unknown, ip: string | nul
 
 // ───────────────────────── Google (OAuth 2.0 + OpenID Connect) ─────────────────────────
 
-export const googleEnabled = (env: Env) => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+/** Google se ofrece solo en los hosts cuya URL de retorno está registrada en Google Cloud (GOOGLE_HOSTS). */
+export const googleEnabled = (env: Env, host?: string) => {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return false;
+  if (!host || !env.GOOGLE_HOSTS) return true;
+  return env.GOOGLE_HOSTS.split(",").map((h) => h.trim().toLowerCase()).includes(host.toLowerCase()) || host.startsWith("127.0.0.1") || host.startsWith("localhost");
+};
 
 const GOOGLE_JWKS = "https://www.googleapis.com/oauth2/v3/certs";
 let jwksCache: { keys: (JsonWebKey & { kid: string })[]; exp: number } | null = null;
@@ -276,5 +286,8 @@ export function toProfile(u: UserRow) {
     emailVerified: Boolean(u.email_verified),
     hasPassword: Boolean(u.password_hash),
     googleLinked: Boolean(u.google_sub),
+    aiLimit: u.ai_limit ?? null,
+    aiBlocked: Boolean(u.ai_blocked),
+    plan: u.plan ?? "free",
   };
 }

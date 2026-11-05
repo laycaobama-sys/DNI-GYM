@@ -28,10 +28,14 @@ import { CommandCenter } from "./command-center";
 import { Crm } from "./crm";
 import { Agents } from "./agents";
 import { Inventory } from "./inventory";
+import { Revenue } from "./revenue";
+import { Messages } from "./messages";
+import { clearErrors, getEmailLog, type EmailLog } from "@/lib/admin-api";
+import { BarChart3, Boxes, CreditCard, Inbox, LayoutDashboard, ScrollText, ServerCog, Siren, UserCog, Users as UsersIcon } from "lucide-react";
 import { addDays, dayKey, fmtDate, fmtDateTime, fmtNumber, timeAgo } from "@/lib/fitness";
 import type { AppEvent, EventType, UserProfile, Workout } from "@/lib/types";
 
-type Tab = "resumen" | "crm" | "agentes" | "inventario" | "usuarios" | "actividad" | "errores" | "sistema";
+type Tab = "resumen" | "ingresos" | "crm" | "mensajes" | "agentes" | "inventario" | "usuarios" | "actividad" | "errores" | "sistema";
 
 const EVENT_META: Record<EventType, { label: string; tone: "neutral" | "accent" | "good" | "warning" | "critical" | "info" }> = {
   signup: { label: "Registro", tone: "accent" },
@@ -82,6 +86,8 @@ export function AdminDashboard() {
   const [now, setNow] = useState(() => Date.now());
 
   const [system, setSystem] = useState<AdminSystem | null>(null);
+  const [newMessages, setNewMessages] = useState(0);
+  const [emailLog, setEmailLog] = useState<EmailLog[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
   const load = useCallback(async () => {
@@ -90,7 +96,9 @@ export function AdminDashboard() {
     try {
       const t = Date.now();
       setNow(t);
-      const [u, e, sys, au] = await Promise.all([adminListUsers(), adminListEvents(t - 30 * 864e5), adminSystem().catch(() => null), adminAudit().catch(() => [])]);
+      const [u, e, sys, au, mails] = await Promise.all([adminListUsers(), adminListEvents(t - 30 * 864e5), adminSystem().catch(() => null), adminAudit().catch(() => []), backendEnabled ? getEmailLog().catch(() => []) : Promise.resolve([])]);
+      setEmailLog(mails);
+      if (backendEnabled) import("@/lib/admin-api").then((x) => x.getMessages()).then((l) => setNewMessages(l.filter((x) => x.status === "nuevo").length)).catch(() => {});
       setUsers(u);
       setEvents(e);
       setSystem(sys);
@@ -182,6 +190,17 @@ export function AdminDashboard() {
 
   const filteredEvents = useMemo(() => events.filter((e) => (eventFilter === "todos" ? e.type !== "visit" : e.type === eventFilter)).slice(0, 300), [events, eventFilter]);
   const errors = useMemo(() => events.filter((e) => e.type === "auth_error" || e.type === "client_error"), [events]);
+  const errorGroups = useMemo(() => {
+    const map = new Map<string, { key: string; type: string; code: string | null; message: string; count: number; last: number }>();
+    for (const e of errors) {
+      const key = `${e.type}|${e.code ?? e.message ?? ""}`;
+      const g = map.get(key) ?? { key, type: e.type, code: e.code ?? null, message: e.message ?? "", count: 0, last: 0 };
+      g.count++;
+      g.last = Math.max(g.last, e.ts);
+      map.set(key, g);
+    }
+    return [...map.values()].sort((a, b) => b.last - a.last);
+  }, [errors]);
 
   const toggleBlock = async (u: UserProfile) => {
     await adminSetBlocked(u.uid, !u.blocked);
@@ -189,43 +208,109 @@ export function AdminDashboard() {
     setDetailState((d) => (d && d.uid === u.uid ? { ...d, blocked: !u.blocked } : d));
   };
 
-  return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Logo href="/admin" />
-            <Badge tone="warning">Admin</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={load} disabled={loading} aria-label="Actualizar">
-              <RefreshCw className={cn("size-4", loading && "animate-spin")} /> <span className="hidden sm:inline">Actualizar</span>
-            </Button>
-            <Link href="/panel" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-ink-2 hover:bg-white/5 hover:text-ink">
-              <ArrowLeft className="size-4" /> <span className="hidden sm:inline">Mi panel</span>
-            </Link>
-            <Avatar name={profile?.name} photo={profile?.photoURL} className="size-8" />
-          </div>
-        </div>
-        <div className="no-scrollbar mx-auto max-w-7xl overflow-x-auto px-4 pb-3 sm:px-6">
-          <Tabs
-            value={tab}
-            onChange={setTab}
-            items={[
-              { value: "resumen", label: "Resumen" },
-              { value: "crm", label: "CRM" },
-              { value: "agentes", label: <span className="flex items-center gap-1.5"><Sparkles className="size-3.5 text-accent" /> Agentes IA</span> },
-              { value: "inventario", label: "Stock" },
-              { value: "usuarios", label: `Usuarios (${users.length})` },
-              { value: "actividad", label: "Actividad" },
-              { value: "errores", label: <span className="flex items-center gap-1.5">Errores {m.authErrors7 + m.clientErrors7 > 0 && <span className="rounded-full bg-critical px-1.5 text-[10px] font-bold text-white">{m.authErrors7 + m.clientErrors7}</span>}</span> },
-              { value: "sistema", label: "Sistema" },
-            ]}
-          />
-        </div>
-      </header>
+  const NAV: { group: string; items: { id: Tab; label: string; icon: typeof LayoutDashboard; badge?: number; tone?: "accent" | "critical" }[] }[] = [
+    { group: "Negocio", items: [
+      { id: "resumen", label: "Resumen", icon: LayoutDashboard },
+      { id: "ingresos", label: "Ingresos", icon: CreditCard },
+      { id: "crm", label: "CRM", icon: UsersIcon },
+      { id: "mensajes", label: "Mensajes", icon: Inbox, badge: newMessages, tone: "accent" },
+    ] },
+    { group: "Operación", items: [
+      { id: "usuarios", label: `Usuarios`, icon: UserCog, badge: users.length },
+      { id: "agentes", label: "Agentes IA", icon: Sparkles },
+      { id: "inventario", label: "Stock", icon: Boxes },
+    ] },
+    { group: "Técnico", items: [
+      { id: "actividad", label: "Actividad", icon: BarChart3 },
+      { id: "errores", label: "Errores", icon: Siren, badge: m.authErrors7 + m.clientErrors7, tone: "critical" },
+      { id: "sistema", label: "Sistema", icon: ServerCog },
+    ] },
+  ];
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+  return (
+    <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
+      {/* barra lateral (escritorio) */}
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-[linear-gradient(180deg,rgb(255_107_26/0.06),transparent_40%)] px-4 py-5 lg:flex">
+        <div className="flex items-center gap-2 px-2">
+          <Logo href="/admin" />
+        </div>
+        <p className="mt-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Centro de control</p>
+        <nav className="mt-6 flex-1 space-y-6 overflow-y-auto" aria-label="Panel de administración">
+          {NAV.map((g) => (
+            <div key={g.group}>
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">{g.group}</p>
+              <ul className="mt-2 space-y-1">
+                {g.items.map((it) => (
+                  <li key={it.id}>
+                    <button
+                      onClick={() => setTab(it.id)}
+                      aria-current={tab === it.id ? "page" : undefined}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                        tab === it.id ? "bg-accent text-accent-ink shadow-[0_8px_24px_-12px_rgb(255_107_26/0.8)]" : "text-ink-2 hover:bg-white/5 hover:text-ink",
+                      )}
+                    >
+                      <it.icon className="size-4" />
+                      <span className="flex-1 text-left">{it.label}</span>
+                      {Boolean(it.badge) && (
+                        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", tab === it.id ? "bg-black/20" : it.tone === "critical" ? "bg-critical text-white" : it.tone === "accent" ? "bg-accent text-accent-ink" : "bg-white/10 text-ink-2")}>{it.badge}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+        <div className="mt-4 space-y-2 border-t border-line pt-4">
+          <button onClick={load} disabled={loading} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-ink-2 hover:bg-white/5 hover:text-ink">
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} /> Actualizar datos
+          </button>
+          <Link href="/panel" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-ink-2 hover:bg-white/5 hover:text-ink">
+            <ArrowLeft className="size-4" /> Volver a mi panel
+          </Link>
+          <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
+            <Avatar name={profile?.name} photo={profile?.photoURL} className="size-8" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{profile?.name}</p>
+              <p className="truncate text-xs text-muted">Dueño · administrador</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div className="min-w-0">
+        {/* cabecera móvil y tableta */}
+        <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-xl lg:hidden">
+          <div className="flex h-14 items-center justify-between gap-3 px-4">
+            <div className="flex items-center gap-2">
+              <Logo href="/admin" compact />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Centro de control</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={load} disabled={loading} className="grid size-9 place-items-center rounded-lg hover:bg-white/5" aria-label="Actualizar">
+                <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+              </button>
+              <Link href="/panel" className="grid size-9 place-items-center rounded-lg hover:bg-white/5" aria-label="Volver a mi panel">
+                <ArrowLeft className="size-4" />
+              </Link>
+            </div>
+          </div>
+          <nav className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-3" aria-label="Secciones">
+            {NAV.flatMap((g) => g.items).map((it) => (
+              <button
+                key={it.id}
+                onClick={() => setTab(it.id)}
+                className={cn("flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium", tab === it.id ? "bg-accent text-accent-ink" : "bg-white/5 text-ink-2")}
+              >
+                <it.icon className="size-3.5" /> {it.label}
+                {Boolean(it.badge) && it.tone && <span className={cn("rounded-full px-1.5 text-[10px] font-bold", it.tone === "critical" ? "bg-critical text-white" : "bg-black/25")}>{it.badge}</span>}
+              </button>
+            ))}
+          </nav>
+        </header>
+
+      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         {!backendEnabled && (
           <div className="mb-6 rounded-xl border border-sky/30 bg-sky/10 p-4 text-sm text-sky">
             <strong>Modo demostración:</strong> estás viendo usuarios y eventos de ejemplo guardados en este navegador. En producción verás aquí a tus usuarios reales guardados en Cloudflare.
@@ -246,6 +331,8 @@ export function AdminDashboard() {
             {tab === "crm" && (backendEnabled ? <Crm /> : <DemoNote />)}
             {tab === "agentes" && (backendEnabled ? <Agents /> : <DemoNote />)}
             {tab === "inventario" && (backendEnabled ? <Inventory /> : <DemoNote />)}
+            {tab === "ingresos" && (backendEnabled ? <Revenue /> : <DemoNote />)}
+            {tab === "mensajes" && (backendEnabled ? <Messages onCount={setNewMessages} /> : <DemoNote />)}
 
             {tab === "usuarios" && (
               <Card>
@@ -365,6 +452,33 @@ export function AdminDashboard() {
                   </Card>
                 </div>
                 <Card>
+                  <CardHeader title="Errores agrupados" subtitle="Cada problema una sola vez, con cuántas veces ha ocurrido. Cuando lo resuelvas, márcalo y desaparece." />
+                  <ul className="divide-y divide-line">
+                    {errorGroups.length === 0 && <li className="flex items-center gap-2 p-5 text-sm text-good"><CheckCircle2 className="size-4" /> No hay errores pendientes.</li>}
+                    {errorGroups.map((g) => (
+                      <li key={g.key} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 text-sm font-medium">
+                            <Badge tone={g.type === "auth_error" ? "critical" : "warning"}>{g.type === "auth_error" ? "Acceso" : "App"}</Badge>
+                            <span className="truncate">{g.code ?? g.message}</span>
+                          </p>
+                          <p className="mt-1 text-xs text-muted">{g.count} {g.count === 1 ? "vez" : "veces"} · última {timeAgo(g.last)}{g.code && FIXES[g.code] ? ` · ${FIXES[g.code]}` : ""}</p>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={async () => {
+                            await clearErrors(g.code ? { code: g.code } : { message: g.message });
+                            setEvents((ev) => ev.filter((e) => !((e.type === "auth_error" || e.type === "client_error") && (g.code ? e.code === g.code : e.message === g.message && !e.code))));
+                          }}
+                        >
+                          <CheckCircle2 className="size-4" /> Marcar resuelto
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+                <Card>
                   <CardHeader title="Registro de errores" subtitle="Errores de inicio de sesión y fallos de la aplicación" />
                   <EventList events={errors} onDelete={async (id) => { await adminDeleteEvent(id); setEvents((ev) => ev.filter((e) => e.id !== id)); }} />
                 </Card>
@@ -424,6 +538,23 @@ export function AdminDashboard() {
                   </ul>
                 </Card>
                 <Card className="lg:col-span-2">
+                  <CardHeader
+                    title="Correo"
+                    subtitle={system?.auth?.emailUsers ? "Bienvenida, contraseñas y recordatorios activos para todos los usuarios" : "Avisos al dueño activos · correos a usuarios pendientes de activar (plan Workers Paid)"}
+                    action={<Badge tone={system?.auth?.email ? "good" : "warning"}>{system?.auth?.email ? "Conectado" : "Sin configurar"}</Badge>}
+                  />
+                  <ul className="divide-y divide-line">
+                    {emailLog.length === 0 && <li className="flex items-center gap-2 px-5 py-4 text-sm text-muted"><ScrollText className="size-4" /> Aún no se ha enviado ningún correo.</li>}
+                    {emailLog.slice(0, 12).map((e) => (
+                      <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+                        <Badge tone={e.status === "enviado" ? "good" : e.status === "omitido" ? "neutral" : "critical"}>{e.status}</Badge>
+                        <span className="min-w-0 flex-1 truncate">{e.kind} · {e.to_email}</span>
+                        <span className="hidden text-xs text-muted sm:inline">{fmtDateTime(e.ts)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+                <Card className="lg:col-span-2">
                   <CardHeader title="Datos y privacidad" />
                   <p className="flex gap-3 px-5 pb-5 pt-3 text-sm text-ink-2">
                     <Database className="size-5 shrink-0 text-muted" />
@@ -435,6 +566,7 @@ export function AdminDashboard() {
           </>
         )}
       </main>
+      </div>
 
       <Modal open={Boolean(detail)} onClose={() => setDetail(null)} title="Detalle del usuario" wide>
         {detail && (

@@ -133,7 +133,7 @@ export function healthScore(u: { last_active_at: number; onboarded: number; w30:
 export async function crmList(env: Env) {
   const since = Date.now() - 30 * DAY;
   const r = await env.DB.prepare(
-    `SELECT u.id, u.name, u.email, u.photo_url, u.provider, u.google_sub IS NOT NULL g, u.role, u.blocked, u.created_at, u.last_active_at, u.login_count, u.workouts_count,
+    `SELECT u.id, u.name, u.email, u.photo_url, u.provider, u.google_sub IS NOT NULL g, u.role, u.blocked, u.ai_limit, u.ai_blocked, u.plan, u.created_at, u.last_active_at, u.login_count, u.workouts_count,
        json_extract(u.profile,'$.onboarded') onboarded, json_extract(u.profile,'$.goal') goal, json_extract(u.profile,'$.place') place, json_extract(u.profile,'$.level') level,
        COALESCE(c.tags,'[]') tags,
        (SELECT COUNT(*) FROM workouts w WHERE w.user_id = u.id AND w.date >= ?1) w30,
@@ -155,6 +155,7 @@ export async function crmList(env: Env) {
       role: String(u.role), blocked: Boolean(u.blocked), createdAt: base.created_at, lastActiveAt: base.last_active_at, loginCount: num(u.login_count), workoutsCount: num(u.workouts_count),
       onboarded: num(u.onboarded) === 1, goal: (u.goal as string) ?? null, place: (u.place as string) ?? null, level: (u.level as string) ?? null,
       tags, workouts30: num(u.w30), ai30: num(u.ai30), notes: num(u.notes),
+      aiLimit: u.ai_limit == null ? null : num(u.ai_limit), aiBlocked: Boolean(u.ai_blocked), plan: String(u.plan ?? "free"),
       stage: stageOf(base, now),
       health: healthScore({ last_active_at: base.last_active_at, onboarded: num(u.onboarded), w30: num(u.w30), ai30: num(u.ai30) }, now),
     };

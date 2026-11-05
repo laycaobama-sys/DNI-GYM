@@ -88,7 +88,12 @@ export function AiChat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiReady, setAiReady] = useState<boolean | null>(null);
+  const [quota, setQuota] = useState<{ used: number; limit: number; remaining: number; tight: boolean; blocked: boolean } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const showQuota = Boolean(historyEndpoint); // solo en el coach del usuario
+  const loadQuota = () => {
+    if (backendEnabled && showQuota) api<typeof quota>("/api/ai/quota").then(setQuota).catch(() => {});
+  };
 
   useEffect(() => {
     if (!backendEnabled) {
@@ -99,6 +104,7 @@ export function AiChat({
     api<{ ai: boolean }>("/api/config")
       .then((c) => setAiReady(c.ai))
       .catch(() => setAiReady(false));
+    if (historyEndpoint) api<NonNullable<typeof quota>>("/api/ai/quota").then(setQuota).catch(() => {});
     if (historyEndpoint)
       api<{ messages: ChatMessage[] }>(historyEndpoint)
         .then((r) => setMessages(r.messages.map((m) => ({ role: m.role, content: m.content }))))
@@ -129,6 +135,7 @@ export function AiChat({
       setMessages((m) => (m.at(-1)?.content ? m : m.slice(0, -1)));
     } finally {
       setBusy(false);
+      loadQuota();
     }
   };
 
@@ -214,6 +221,18 @@ export function AiChat({
             {busy ? <Loader2 className="size-5 animate-spin" /> : <ArrowUp className="size-5" />}
           </button>
         </div>
+        {quota && quota.limit > 0 && (
+          <div className="mt-2 flex items-center gap-2" aria-live="polite">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div className={cn("h-full rounded-full", quota.remaining / quota.limit <= 0.2 ? "bg-warning" : "bg-accent")} style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }} />
+            </div>
+            <span className={cn("text-[11px] tabular-nums", quota.remaining / quota.limit <= 0.2 ? "text-warning" : "text-muted")}>
+              {quota.remaining === 0 ? "Sin consultas hasta mañana" : `Te quedan ${quota.remaining} de ${quota.limit} consultas hoy`}
+            </span>
+          </div>
+        )}
+        {quota?.tight && quota.remaining > 0 && <p className="mt-1 text-center text-[11px] text-warning">Hoy hay mucha demanda: el límite diario se ha reducido temporalmente para que llegue a todos.</p>}
+        {quota?.blocked && <p className="mt-1 text-center text-[11px] text-warning">El coach con IA está desactivado para tu cuenta.</p>}
         {disclaimer && <p className="mt-2 text-center text-[11px] text-muted">{disclaimer}</p>}
       </form>
     </div>

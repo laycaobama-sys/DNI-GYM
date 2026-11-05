@@ -69,6 +69,7 @@ export function LoginCard() {
     return code ? (AUTH_ERROR_MESSAGES[code] ?? "No se pudo iniciar sesión. Inténtalo de nuevo.") : null;
   });
   const [sent, setSent] = useState(false);
+  const [emailed, setEmailed] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [tsKey, setTsKey] = useState(0);
   const siteKey = config.turnstileSiteKey;
@@ -97,7 +98,8 @@ export function LoginCard() {
       if (mode === "signup") await signUp({ name, email, password, turnstile, acceptTerms: accept });
       else if (mode === "login") await signIn({ email, password, turnstile });
       else {
-        await requestReset({ email, turnstile });
+        const r = await requestReset({ email, turnstile });
+        setEmailed(r.emailed);
         setSent(true);
       }
     } catch (e) {
@@ -168,7 +170,11 @@ export function LoginCard() {
                 <CheckCircle2 className="size-5" /> Solicitud recibida
               </p>
               <p className="mt-2">
-                Si existe una cuenta con <strong className="text-ink">{email}</strong>, el equipo de DNI GYM te enviará un enlace seguro (válido 72 horas) para crear tu contraseña nueva.
+                {emailed ? (
+                  <>Si existe una cuenta con <strong className="text-ink">{email}</strong>, te hemos enviado un correo con un enlace seguro (válido 1 hora) para crear tu contraseña nueva. Revisa también la carpeta de spam.</>
+                ) : (
+                  <>Si existe una cuenta con <strong className="text-ink">{email}</strong>, el equipo de DNI GYM te enviará un enlace seguro para crear tu contraseña nueva. ¿Prisa? Escríbenos a <a href="mailto:contacto@dnigym.com" className="text-accent underline">contacto@dnigym.com</a>.</>
+                )}
               </p>
               <button onClick={() => switchMode("login")} className="mt-4 font-semibold text-accent">
                 Volver a iniciar sesión

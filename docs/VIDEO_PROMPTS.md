@@ -2,6 +2,8 @@
 
 Estilo de marca: **negro y grafito con naranja solar `#ff6b1a`**, fotografía en blanco y negro de alto contraste con toques naranjas, luz dura lateral, grano fino, sensación premium y deportiva. Tipografía de titulares: **Barlow Condensed ExtraBold Italic** (mayúsculas); texto: **Inter**.
 
+> Nota: el MCP de Google Flow está en el ordenador del dueño; las sesiones de Claude en la nube no pueden usarlo. Genera los vídeos e imágenes con estos prompts (o con Claude Code en ese ordenador) y súbelos.
+>
 > Sube el resultado a `public/brand/` con estos nombres y vuelve a desplegar. La portada usa el vídeo automáticamente si existe `public/brand/hero.mp4` (si no, muestra la foto `hero.webp`).
 
 ## 1. Vídeo de portada (hero) — `public/brand/hero.mp4`

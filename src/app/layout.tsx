@@ -1,3 +1,4 @@
+import { CookieNotice } from "@/components/cookie-notice";
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Inter, Outfit } from "next/font/google";
 import "./globals.css";
@@ -55,7 +56,13 @@ const orgLd = [
     "@id": absoluteUrl("/#organization"),
     name: SITE.name,
     url: SITE.url,
-    logo: absoluteUrl("/icon.svg"),
+    logo: absoluteUrl("/icon-512.png"),
+    email: "contacto@dnigym.com",
+    description: SITE.metaDescription,
+    contactPoint: [
+      { "@type": "ContactPoint", contactType: "customer support", email: "contacto@dnigym.com", availableLanguage: ["es"], url: absoluteUrl("/contacto") },
+      { "@type": "ContactPoint", contactType: "privacy", email: "privacidad@dnigym.com" },
+    ],
   },
   {
     "@context": "https://schema.org",
@@ -79,6 +86,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <JsonLd data={orgLd} />
         <Providers>{children}</Providers>
+        <CookieNotice />
       </body>
     </html>
   );

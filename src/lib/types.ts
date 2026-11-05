@@ -35,6 +35,16 @@ export interface UserProfile {
   // ── personalización (cuestionario de bienvenida) ──
   level?: "principiante" | "intermedio" | "avanzado";
   place?: "gimnasio" | "casa";
+  /** lugares elegidos (gimnasio y/o casa) */
+  places?: ("gimnasio" | "casa")[];
+  /** objetivos elegidos en orden de prioridad (máx. 2) */
+  goals?: string[];
+  /** recibir correos de recordatorio y novedades */
+  emailOptIn?: boolean;
+  /** límite diario de IA fijado por el administrador */
+  aiLimit?: number | null;
+  aiBlocked?: boolean;
+  plan?: string;
   focusAreas?: string[];
   /** tipo de alimentación para el menú diario */
   diet?: "omnivora" | "vegetariana" | "vegana" | "sin-lactosa";

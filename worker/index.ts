@@ -27,6 +27,7 @@ import {
   type UserRow,
 } from "./auth";
 import { DEFAULT_MODEL, createGeminiService, type ChatTurn } from "./gemini";
+import { notifyOwner, reminderMail, resetMail, sendMail, welcomeMail } from "./email";
 import {
   AGENTS,
   CUSTOMER_SYSTEM,
@@ -52,7 +53,7 @@ import { SESSION_COOKIE } from "./auth";
 const PROFILE_KEYS = new Set([
   "name", "sex", "birthYear", "heightCm", "activity", "goal", "targetWeight", "weeklyWorkoutsGoal", "calorieGoal", "proteinGoal",
   "carbsGoal", "fatGoal", "waterGoal", "onboarded", "level", "place", "focusAreas", "planSlug", "challenges", "diet", "sessionMinutes",
-  "trainTime", "trainDays",
+  "trainTime", "trainDays", "goals", "places", "emailOptIn",
 ]);
 const EVENT_TYPES = new Set(["signup", "login", "logout", "auth_error", "client_error", "visit", "workout_completed", "account_deleted"]);
 
@@ -70,6 +71,37 @@ async function logEvent(env: Env, e: { type: string; userId?: string | null; ema
 const ipOf = (req: Request) => req.headers.get("cf-connecting-ip") || "local";
 const uaOf = (req: Request) => req.headers.get("user-agent")?.slice(0, 300) ?? null;
 const NEW_PROFILE = JSON.stringify({ onboarded: false, weeklyWorkoutsGoal: 3 });
+
+/** Tareas en segundo plano (correos) sin retrasar la respuesta. */
+const CTX = new WeakMap<Request, ExecutionContext>();
+const later = (req: Request, p: Promise<unknown>) => {
+  const ctx = CTX.get(req);
+  if (ctx) ctx.waitUntil(p.catch((e) => console.error("tarea en segundo plano", e)));
+  else p.catch(() => {});
+};
+const siteUrl = (env: Env, url: URL) => (env.SITE_URL && !/127\.0\.0\.1|localhost/.test(url.host) ? env.SITE_URL.replace(/\/$/, "") : url.origin);
+
+async function unsubUrl(env: Env, url: URL, u: UserRow) {
+  let t = u.unsub_token;
+  if (!t) {
+    t = randomToken(18);
+    await env.DB.prepare("UPDATE users SET unsub_token = ? WHERE id = ?").bind(t, u.id).run();
+  }
+  return `${siteUrl(env, url)}/api/email/unsubscribe?t=${t}`;
+}
+
+/** Bienvenida al usuario y aviso al dueño de un registro nuevo. */
+function onSignup(env: Env, req: Request, url: URL, u: UserRow, via: string) {
+  later(
+    req,
+    (async () => {
+      const w = welcomeMail(env, u.name || "", await unsubUrl(env, url, u));
+      await sendMail(env, "welcome", { to: u.email, ...w });
+      const total = await env.DB.prepare("SELECT COUNT(*) c FROM users").first<{ c: number }>();
+      await notifyOwner(env, "owner_signup", `Nuevo registro en DNI GYM: ${u.name || u.email}`, [`${u.name || "Sin nombre"} (${u.email}) se ha registrado con ${via === "google" ? "Google" : "correo y contraseña"}.`, `Usuarios totales: ${total?.c ?? "?"}.`]);
+    })(),
+  );
+}
 
 async function userBy(env: Env, col: "id" | "email" | "google_sub", v: string) {
   return env.DB.prepare(`SELECT * FROM users WHERE ${col} = ?`).bind(v).first<UserRow>();
@@ -140,6 +172,7 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
     if (b.acceptTerms !== true) throw new HttpError(400, "Debes aceptar los términos y la política de privacidad.");
     if (await userBy(env, "email", email)) throw new HttpError(409, "Ya existe una cuenta con este correo. Inicia sesión o recupera tu contraseña.");
     const u = await createUser(env, { email, name, provider: "password", passwordHash: await hashPassword(b.password!), verified: false });
+    onSignup(env, req, url, u, "password");
     return withCookie(await startSession(env, req, u, true, "password"));
   }
 
@@ -156,7 +189,7 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
     if (!u || !ok) {
       await logEvent(env, { type: "auth_error", userId: u?.id, email, code: u && !u.password_hash ? "auth/no-password" : "auth/wrong-credentials", message: "Correo o contraseña incorrectos", path: "/login", ua: uaOf(req) });
       if (u && !u.password_hash)
-        throw new HttpError(401, googleEnabled(env) ? "Esta cuenta se creó con Google. Entra con Google o crea una contraseña desde «¿Olvidaste tu contraseña?»." : "Esta cuenta todavía no tiene contraseña. Pulsa «¿Olvidaste tu contraseña?».");
+        throw new HttpError(401, googleEnabled(env, url.host) ? "Esta cuenta se creó con Google. Entra con Google o crea una contraseña desde «¿Olvidaste tu contraseña?»." : "Esta cuenta todavía no tiene contraseña. Pulsa «¿Olvidaste tu contraseña?».");
       throw new HttpError(401, "Correo o contraseña incorrectos.");
     }
     return withCookie(await startSession(env, req, u, false, "password"));
@@ -170,9 +203,22 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
     const email = normalizeEmail(b.email);
     if (!email) throw new HttpError(400, "Escribe un correo electrónico válido.");
     const u = await userBy(env, "email", email);
-    // Sin servicio de correo propio todavía: la solicitud queda en el panel de administración, que genera el enlace.
     await logEvent(env, { type: "password_reset", userId: u?.id, email, code: u ? "reset/requested" : "reset/unknown-email", message: "Solicitud de cambio de contraseña", path: "/recuperar", ua: uaOf(req) });
-    return json({ ok: true });
+    if (u && !u.blocked) {
+      later(
+        req,
+        (async () => {
+          // Con el envío a usuarios activo, el enlace (1 h) llega directamente a su correo; si no, se avisa al dueño.
+          if (env.EMAIL_USERS === "1") {
+            const link = await createResetLink(env, siteUrl(env, url), u.id, 1, null);
+            const ok = await sendMail(env, "reset", { to: u.email, ...resetMail(env, u.name || "", link.url) });
+            if (ok) return;
+          }
+          await notifyOwner(env, "owner_reset", `Solicitud de contraseña: ${u.email}`, [`${u.name || u.email} ha pedido cambiar su contraseña.`, "Genera su enlace en Admin → Usuarios → su ficha → «Enlace de contraseña» y envíaselo."]);
+        })(),
+      );
+    }
+    return json({ ok: true, emailed: env.EMAIL_USERS === "1" });
   }
 
   // ── restablecer con enlace de un solo uso ──
@@ -200,7 +246,7 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
 
   // ── Google: inicio del flujo OAuth (código + PKCE + nonce + state) ──
   if (path === "/api/auth/google" && m === "GET") {
-    if (!googleEnabled(env)) return Response.redirect(`${url.origin}/login/?error=google-off`, 302);
+    if (!googleEnabled(env, url.host)) return Response.redirect(`${url.origin}/login/?error=google-off`, 302);
     if (!(await rateLimit(env, `google:${ip}`, 30, 600))) return Response.redirect(`${url.origin}/login/?error=rate`, 302);
     const state = randomToken(24);
     const verifier = randomToken(48);
@@ -230,7 +276,7 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
         h.append("set-cookie", tempCookie("g_oauth", "", req, 0));
         return new Response(null, { status: 302, headers: h });
       });
-    if (!googleEnabled(env)) return fail("google-off", "Google no está configurado");
+    if (!googleEnabled(env, url.host)) return fail("google-off", "Google no está configurado");
     const [state, verifier, nonce] = (getCookie(req, "g_oauth") || "").split(".");
     if (url.searchParams.get("error")) return fail("google-cancelled", url.searchParams.get("error") || "cancelado");
     if (!state || state !== url.searchParams.get("state")) return fail("google-state", "Estado OAuth no válido");
@@ -260,6 +306,7 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
         } else {
           u = await createUser(env, { email: g.email, name: g.name, provider: "google", verified: true, googleSub: g.sub, picture: g.picture });
           isNew = true;
+          onSignup(env, req, url, u, "google");
         }
       }
       const r = await startSession(env, req, u, isNew, "google");
@@ -313,15 +360,32 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
 
 // ───────────────────────── IA ─────────────────────────
 
+/**
+ * Cuota de IA de un usuario hoy.
+ * - límite personal: el fijado por el admin (ai_limit) o AI_DAILY_LIMIT (admins ×4);
+ * - reparto justo: si el uso global supera el 80 % del tope diario gratuito, los usuarios pasan a 5 consultas;
+ * - el admin puede bloquear la IA a un usuario concreto (ai_blocked).
+ */
+async function aiQuota(env: Env, u: UserRow) {
+  const globalCap = Number(env.AI_GLOBAL_DAILY_LIMIT || 200);
+  const [g, mine] = await env.DB.batch([
+    env.DB.prepare("SELECT COALESCE(SUM(requests),0) r FROM ai_usage WHERE day = ?").bind(today()),
+    env.DB.prepare("SELECT COALESCE(SUM(requests),0) r FROM ai_usage WHERE user_id = ? AND day = ?").bind(u.id, today()),
+  ]);
+  const globalUsed = Number((g.results[0] as { r: number }).r);
+  const used = Number((mine.results[0] as { r: number }).r);
+  const base = u.ai_limit ?? Number(env.AI_DAILY_LIMIT || 30) * (u.role === "admin" ? 4 : 1);
+  const tight = u.role !== "admin" && globalUsed >= globalCap * 0.8;
+  const limit = u.ai_blocked ? 0 : tight ? Math.min(base, 5) : base;
+  return { used, limit, remaining: Math.max(0, limit - used), globalUsed, globalCap, tight, blocked: Boolean(u.ai_blocked) };
+}
+
 async function checkAiQuota(env: Env, u: UserRow) {
-  // tope global diario para no salir del nivel gratuito de Gemini (por defecto 200 peticiones/día)
-  const global = await env.DB.prepare("SELECT COALESCE(SUM(requests),0) r FROM ai_usage WHERE day = ?").bind(today()).first<{ r: number }>();
-  if ((global?.r ?? 0) >= Number(env.AI_GLOBAL_DAILY_LIMIT || 200))
-    throw new HttpError(429, "La IA ha alcanzado su límite diario gratuito. Vuelve a intentarlo mañana.");
-  const limit = Number(env.AI_DAILY_LIMIT || 30) * (u.role === "admin" ? 4 : 1);
-  const row = await env.DB.prepare("SELECT requests FROM ai_usage WHERE user_id = ? AND day = ?").bind(u.id, today()).first<{ requests: number }>();
-  if ((row?.requests ?? 0) >= limit) throw new HttpError(429, `Has llegado al límite de ${limit} consultas a la IA por hoy. Vuelve mañana.`);
-  return limit - (row?.requests ?? 0);
+  const q = await aiQuota(env, u);
+  if (q.blocked) throw new HttpError(403, "El acceso a la IA está desactivado para tu cuenta. Escríbenos a contacto@dnigym.com si crees que es un error.");
+  if (q.globalUsed >= q.globalCap) throw new HttpError(429, "La IA ha alcanzado su límite diario. Vuelve a intentarlo mañana.");
+  if (q.remaining <= 0) throw new HttpError(429, `Has usado tus ${q.limit} consultas a la IA de hoy. Vuelven mañana a las 00:00 (UTC).`);
+  return q.remaining;
 }
 
 async function addAiUsage(env: Env, userId: string, tokens: number) {
@@ -412,13 +476,48 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
       ai: Boolean(env.GEMINI_API_KEY),
       model: env.GEMINI_MODEL || DEFAULT_MODEL,
       devAuth: env.DEV_AUTH === "1",
-      google: googleEnabled(env),
+      google: googleEnabled(env, url.host),
+      email: { owner: Boolean(env.EMAIL), users: env.EMAIL_USERS === "1" },
       turnstileSiteKey: env.TURNSTILE_SECRET ? env.TURNSTILE_SITE_KEY || null : null,
     });
 
   if (seg[0] === "auth") {
     const r = await authRoutes(req, env, url, path, m);
     if (r) return r;
+  }
+
+  // ── contacto (público) ──
+  if (path === "/api/contact" && m === "POST") {
+    const ip = req.headers.get("cf-connecting-ip") || "local";
+    if (!(await rateLimit(env, `contact:${ip}`, 5, 3600))) throw new HttpError(429, "Has enviado varios mensajes seguidos. Inténtalo más tarde.");
+    const b = await readJson<{ name?: string; email?: string; subject?: string; message?: string; turnstile?: string; website?: string }>(req, 12_000);
+    if (b.website) return json({ ok: true }); // trampa anti-spam: campo oculto
+    await verifyTurnstile(env, b.turnstile, ip);
+    const name = String(b.name || "").trim().slice(0, 80);
+    const email = normalizeEmail(b.email);
+    const subject = String(b.subject || "Consulta").trim().slice(0, 120) || "Consulta";
+    const message = String(b.message || "").trim().slice(0, 4000);
+    if (name.length < 2) throw new HttpError(400, "Escribe tu nombre.");
+    if (!email) throw new HttpError(400, "Escribe un correo electrónico válido.");
+    if (message.length < 10) throw new HttpError(400, "Cuéntanos un poco más (mínimo 10 caracteres).");
+    const u = await currentUser(env, req);
+    await env.DB.prepare("INSERT INTO contact_messages (ts, name, email, subject, message, user_id) VALUES (?, ?, ?, ?, ?, ?)").bind(Date.now(), name, email, subject, message, u?.id ?? null).run();
+    later(req, notifyOwner(env, "owner_contact", `Contacto: ${subject}`, [`De: ${name} <${email}>`, message], email));
+    return json({ ok: true });
+  }
+
+  if (path === "/api/email/unsubscribe" && m === "GET") {
+    const t = url.searchParams.get("t") || "";
+    const u = t.length >= 16 ? await env.DB.prepare("SELECT * FROM users WHERE unsub_token = ?").bind(t).first<UserRow>() : null;
+    if (u) {
+      const prof = JSON.parse(u.profile || "{}") as Record<string, unknown>;
+      prof.emailOptIn = false;
+      await env.DB.prepare("UPDATE users SET profile = ? WHERE id = ?").bind(JSON.stringify(prof), u.id).run();
+    }
+    return new Response(
+      `<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Baja de correos · DNI GYM</title><body style="margin:0;background:#070708;color:#f4f4f5;font-family:Inter,Arial,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center;padding:24px"><div><h1 style="font-style:italic;text-transform:uppercase">${u ? "Listo, te hemos dado de baja" : "Enlace no válido"}</h1><p style="color:#b9bcc2">${u ? "Ya no recibirás recordatorios. Puedes volver a activarlos en tu Perfil." : "El enlace ha caducado o no es correcto."}</p><p><a href="/" style="color:#ff6b1a">Volver a DNI GYM</a></p></div></body></html>`,
+      { headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" } },
+    );
   }
 
   if (path === "/api/events" && m === "POST") {
@@ -583,6 +682,7 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
 
   // ── DNI AI Coach ──
   if (seg[0] === "ai") {
+    if (path === "/api/ai/quota" && m === "GET") return json(await aiQuota(env, user));
     if (path === "/api/ai/history" && m === "GET") {
       const r = await env.DB.prepare("SELECT role, content, ts FROM ai_messages WHERE user_id = ? ORDER BY id DESC LIMIT 40").bind(user.id).all();
       return json({ messages: r.results.reverse(), ai: Boolean(env.GEMINI_API_KEY) });
@@ -653,7 +753,7 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
       return json(r.results.map((x) => JSON.parse(x.data)));
     }
     if (seg[1] === "users" && seg[2] && m === "PATCH") {
-      const b = await readJson<{ blocked?: boolean; role?: string }>(req);
+      const b = await readJson<{ blocked?: boolean; role?: string; aiLimit?: number | null; aiBlocked?: boolean }>(req);
       const target = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(seg[2]).first<UserRow>();
       if (!target) throw new HttpError(404, "Usuario no encontrado");
       if (target.id === admin.id && (b.blocked || (b.role && b.role !== "admin"))) throw new HttpError(400, "No puedes bloquearte ni quitarte el rol de administrador a ti mismo");
@@ -661,6 +761,16 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
         await env.DB.prepare("UPDATE users SET blocked = ? WHERE id = ?").bind(b.blocked ? 1 : 0, target.id).run();
         if (b.blocked) await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(target.id).run();
         await audit(env, admin, b.blocked ? "user.block" : "user.unblock", target.email);
+      }
+      if ("aiLimit" in b) {
+        const lim = b.aiLimit === null ? null : Math.max(0, Math.min(500, Math.round(Number(b.aiLimit))));
+        if (lim !== null && !Number.isFinite(lim)) throw new HttpError(400, "Límite no válido");
+        await env.DB.prepare("UPDATE users SET ai_limit = ? WHERE id = ?").bind(lim, target.id).run();
+        await audit(env, admin, "user.ai_limit", target.email, { aiLimit: lim });
+      }
+      if (typeof b.aiBlocked === "boolean") {
+        await env.DB.prepare("UPDATE users SET ai_blocked = ? WHERE id = ?").bind(b.aiBlocked ? 1 : 0, target.id).run();
+        await audit(env, admin, b.aiBlocked ? "user.ai_block" : "user.ai_unblock", target.email);
       }
       if (b.role === "admin" || b.role === "user") {
         await env.DB.prepare("UPDATE users SET role = ? WHERE id = ?").bind(b.role, target.id).run();
@@ -675,6 +785,54 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
       const link = await createResetLink(env, url.origin, target.id, 72, admin.id);
       await audit(env, admin, "user.reset_link", target.email);
       return json(link);
+    }
+    if (path === "/api/admin/messages" && m === "GET") {
+      const r = await env.DB.prepare("SELECT * FROM contact_messages ORDER BY id DESC LIMIT 300").all();
+      return json(r.results);
+    }
+    if (seg[1] === "messages" && seg[2] && m === "PATCH") {
+      const b = await readJson<{ status?: string }>(req);
+      if (!["nuevo", "en_curso", "resuelto"].includes(String(b.status))) throw new HttpError(400, "Estado no válido");
+      await env.DB.prepare("UPDATE contact_messages SET status = ? WHERE id = ?").bind(b.status, Number(seg[2])).run();
+      return json({ ok: true });
+    }
+    if (path === "/api/admin/emails" && m === "GET") {
+      const r = await env.DB.prepare("SELECT * FROM email_log ORDER BY id DESC LIMIT 200").all();
+      return json(r.results);
+    }
+    if (path === "/api/admin/errors/clear" && m === "POST") {
+      // el dueño marca como resueltos (elimina) los errores de un código o mensaje concreto
+      const b = await readJson<{ code?: string | null; message?: string | null }>(req);
+      const r = b.code
+        ? await env.DB.prepare("DELETE FROM events WHERE type IN ('auth_error','client_error') AND code = ?").bind(String(b.code)).run()
+        : b.message
+          ? await env.DB.prepare("DELETE FROM events WHERE type = 'client_error' AND message = ?").bind(String(b.message)).run()
+          : await env.DB.prepare("DELETE FROM events WHERE type = 'client_error' AND (code IS NULL OR code = '')").run();
+      await audit(env, admin, "errors.clear", b.code ?? b.message ?? "client_error", { deleted: r.meta.changes });
+      return json({ deleted: r.meta.changes });
+    }
+    if (path === "/api/admin/revenue" && m === "GET") {
+      const since = Date.now() - 30 * 864e5;
+      const [plans, subs, pay30, payAll, recent, byPlan] = await env.DB.batch([
+        env.DB.prepare("SELECT * FROM plans ORDER BY price_cents"),
+        env.DB.prepare("SELECT COUNT(*) active, COALESCE(SUM(p.price_cents),0) mrr FROM subscriptions s JOIN plans p ON p.id = s.plan_id WHERE s.status = 'active'"),
+        env.DB.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount_cents),0) total FROM payments WHERE status = 'paid' AND ts >= ?").bind(since),
+        env.DB.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount_cents),0) total, COUNT(DISTINCT user_id) payers FROM payments WHERE status = 'paid'"),
+        env.DB.prepare("SELECT p.*, u.email, u.name FROM payments p LEFT JOIN users u ON u.id = p.user_id ORDER BY p.ts DESC LIMIT 50"),
+        env.DB.prepare("SELECT plan k, COUNT(*) c FROM users GROUP BY plan"),
+      ]);
+      return json({
+        enabled: false,
+        plans: plans.results,
+        activeSubscriptions: Number((subs.results[0] as { active: number }).active),
+        mrrCents: Number((subs.results[0] as { mrr: number }).mrr),
+        revenue30Cents: Number((pay30.results[0] as { total: number }).total),
+        payments30: Number((pay30.results[0] as { n: number }).n),
+        revenueAllCents: Number((payAll.results[0] as { total: number }).total),
+        payers: Number((payAll.results[0] as { payers: number }).payers),
+        recent: recent.results,
+        usersByPlan: byPlan.results,
+      });
     }
     if (path === "/api/admin/audit" && m === "GET") {
       const r = await env.DB.prepare("SELECT * FROM audit_log ORDER BY id DESC LIMIT 300").all();
@@ -695,7 +853,9 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
         aiTokens30d: a.t,
         activeSessions: (sess.results[0] as { c: number }).c,
         adminEmails: adminEmails(env),
-        auth: { password: true, google: googleEnabled(env), turnstile: Boolean(env.TURNSTILE_SECRET), email: false },
+        auth: { password: true, google: googleEnabled(env), googleHosts: env.GOOGLE_HOSTS || "todos", turnstile: Boolean(env.TURNSTILE_SECRET), email: Boolean(env.EMAIL), emailUsers: env.EMAIL_USERS === "1" },
+        siteUrl: env.SITE_URL || url.origin,
+        aiGlobalDailyLimit: Number(env.AI_GLOBAL_DAILY_LIMIT || 200),
       });
     }
     // ── centro de control: métricas, CRM, inventario y agentes ──
@@ -780,10 +940,58 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
   throw new HttpError(404, "Ruta no encontrada");
 }
 
+/** Tareas diarias (Cron Trigger): recordatorios, resumen semanal al dueño y limpieza técnica. */
+async function daily(env: Env, ctx: ExecutionContext) {
+  await ensureSchema(env);
+  const now = Date.now();
+  const url = new URL(env.SITE_URL || "https://dnigym.com");
+  // limpieza: sesiones y enlaces caducados, contadores de límites antiguos
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now),
+    env.DB.prepare("DELETE FROM auth_tokens WHERE expires_at < ?").bind(now),
+    env.DB.prepare("DELETE FROM rate_limits WHERE window < ?").bind(Math.floor(now / 1000 / 86400) - 2),
+  ]);
+  // recordatorios a quien lleva 3+ días sin entrar (máx. 1 por semana y 200 al día)
+  if (env.EMAIL_USERS === "1") {
+    const r = await env.DB.prepare(
+      `SELECT * FROM users WHERE blocked = 0 AND last_active_at < ?1 AND last_active_at > ?2 AND (last_reminder_at IS NULL OR last_reminder_at < ?3)
+       AND COALESCE(json_extract(profile,'$.emailOptIn'), 1) != 0 LIMIT 200`,
+    )
+      .bind(now - 3 * 864e5, now - 60 * 864e5, now - 7 * 864e5)
+      .all<UserRow>();
+    for (const u of r.results) {
+      const days = Math.round((now - u.last_active_at) / 864e5);
+      const ok = await sendMail(env, "reminder", { to: u.email, ...reminderMail(env, u.name || "", days, await unsubUrl(env, url, u)) });
+      if (ok) await env.DB.prepare("UPDATE users SET last_reminder_at = ? WHERE id = ?").bind(now, u.id).run();
+    }
+  }
+  // lunes: resumen semanal al dueño
+  if (new Date(now).getUTCDay() === 1) {
+    const w = now - 7 * 864e5;
+    const s = await env.DB.prepare(
+      `SELECT (SELECT COUNT(*) FROM users) total, (SELECT COUNT(*) FROM users WHERE created_at >= ?1) nuevos, (SELECT COUNT(*) FROM users WHERE last_active_at >= ?1) activos,
+       (SELECT COUNT(*) FROM workouts WHERE date >= ?1) entrenos, (SELECT COUNT(*) FROM events WHERE type IN ('auth_error','client_error') AND ts >= ?1) errores,
+       (SELECT COUNT(*) FROM contact_messages WHERE status = 'nuevo') mensajes`,
+    )
+      .bind(w)
+      .first<Record<string, number>>();
+    ctx.waitUntil(
+      notifyOwner(env, "owner_summary", "Resumen semanal de DNI GYM", [
+        `Usuarios totales: ${s?.total}. Nuevos esta semana: ${s?.nuevos}. Activos: ${s?.activos}.`,
+        `Entrenos guardados: ${s?.entrenos}. Errores: ${s?.errores}. Mensajes sin responder: ${s?.mensajes}.`,
+      ]),
+    );
+  }
+}
+
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(daily(env, ctx));
+  },
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    CTX.set(req, ctx);
     try {
       return await handleApi(req, env, url);
     } catch (e) {

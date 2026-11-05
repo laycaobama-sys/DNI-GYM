@@ -46,6 +46,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
+    // al sincronizar lo guardado sin conexión, recargar los datos del servidor
+    const onSynced = () => reload();
+    window.addEventListener("dnigym:synced", onSynced);
+    return () => window.removeEventListener("dnigym:synced", onSynced);
   }, [reload]);
 
   const saveWorkout = useCallback(

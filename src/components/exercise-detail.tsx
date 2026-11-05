@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, Lightbulb, CirclePlay } from "lucide-react";
 import { groupLabel, youtubeSearchUrl, type Exercise } from "@/data/exercises";
 import { ExerciseDemo } from "./exercise-demo";
-import { MuscleMap } from "./muscle-map";
+import { MuscleViewer } from "./muscle-viewer";
 
 export function ExerciseFacts({ e }: { e: Exercise }) {
   const facts = [
@@ -25,7 +25,7 @@ export function ExerciseFacts({ e }: { e: Exercise }) {
 export function ExerciseMuscles({ e, map }: { e: Exercise; map?: boolean }) {
   return (
     <div className="space-y-3">
-      {map && <MuscleMap primary={e.primary} secondary={e.secondary} className="mx-auto max-w-sm" />}
+      {map && <MuscleViewer primary={e.primary} secondary={e.secondary} />}
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-muted">Músculos principales</p>
         <div className="mt-2 flex flex-wrap gap-2">

@@ -49,8 +49,12 @@ export function SiteFooter() {
             {GUIDES.slice(0, 3).map((g) => (
               <li key={g.slug}><Link href={`/guias/${g.slug}`} className="hover:text-ink">{g.title.split(":")[0]}</Link></li>
             ))}
+            <li><Link href="/contacto" className="hover:text-ink">Contacto</Link></li>
             <li><Link href="/privacidad" className="hover:text-ink">Privacidad</Link></li>
+            <li><Link href="/cookies" className="hover:text-ink">Cookies</Link></li>
+            <li><Link href="/aviso-legal" className="hover:text-ink">Aviso legal</Link></li>
             <li><Link href="/terminos" className="hover:text-ink">Términos</Link></li>
+            <li><a href="mailto:contacto@dnigym.com" className="hover:text-ink">contacto@dnigym.com</a></li>
           </ul>
         </div>
       </div>

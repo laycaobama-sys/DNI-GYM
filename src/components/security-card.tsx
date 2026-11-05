@@ -7,7 +7,7 @@ import { Badge, Button, Card, CardHeader, Field } from "@/components/ui";
 
 /** Seguridad de la cuenta: método de acceso y cambio (o creación) de contraseña. */
 export function SecurityCard() {
-  const { profile, changePassword, mode } = useAuth();
+  const { profile, changePassword, mode, updateProfile } = useAuth();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,6 +47,18 @@ export function SecurityCard() {
             <ShieldCheck className="size-4 text-accent" /> Acceso con Google: <strong className="text-ink">{profile.googleLinked ? "vinculado" : "no vinculado"}</strong>
           </p>
           <p className="text-xs text-muted">Usa una contraseña única de al menos 10 caracteres con letras y números.</p>
+          <label className="mt-4 flex items-start gap-3 rounded-xl bg-white/[0.03] p-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-[#ff6b1a]"
+              checked={profile.emailOptIn !== false}
+              onChange={(e) => updateProfile({ emailOptIn: e.target.checked })}
+            />
+            <span>
+              <span className="block font-medium text-ink">Recordatorios por correo</span>
+              <span className="text-xs text-muted">Un aviso si llevas varios días sin entrenar (máx. 1 por semana). Puedes desactivarlo cuando quieras.</span>
+            </span>
+          </label>
         </div>
         <form onSubmit={submit} className="space-y-3">
           {hasPassword && (

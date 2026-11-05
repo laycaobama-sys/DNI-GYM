@@ -1,6 +1,6 @@
 import { cn } from "@/lib/cn";
 
-type Region =
+export type Region =
   | "chest" | "shoulders" | "biceps" | "forearms" | "abs" | "obliques" | "quads" | "adductors"
   | "traps" | "reardelts" | "lats" | "midback" | "triceps" | "lowerback" | "glutes" | "hamstrings" | "calves";
 
@@ -25,7 +25,7 @@ const RULES: [RegExp, Region[]][] = [
   [/gemelo|s[oó]leo|gastrocnemio/, ["calves"]],
 ];
 
-function regionsOf(muscles: string[]) {
+export function regionsOf(muscles: string[]) {
   const out = new Set<Region>();
   for (const m of muscles) {
     const s = m.toLowerCase();

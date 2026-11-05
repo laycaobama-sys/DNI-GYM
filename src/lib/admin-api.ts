@@ -63,6 +63,9 @@ export interface Customer {
   notes: number;
   stage: Stage;
   health: number;
+  aiLimit: number | null;
+  aiBlocked: boolean;
+  plan: string;
 }
 
 export interface CrmNote {
@@ -126,3 +129,46 @@ export const STAGE_META: Record<Stage, { label: string; tone: "accent" | "good" 
   inactivo: { label: "Inactivo", tone: "neutral", hint: "Más de 21 días sin entrar" },
   bloqueado: { label: "Bloqueado", tone: "critical", hint: "Acceso suspendido" },
 };
+
+// ───────────────────────── mensajes, correo, ingresos ─────────────────────────
+
+export interface ContactMessage {
+  id: number;
+  ts: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  user_id: string | null;
+  status: "nuevo" | "en_curso" | "resuelto";
+}
+
+export interface EmailLog {
+  id: number;
+  ts: number;
+  kind: string;
+  to_email: string;
+  status: string;
+  error: string | null;
+}
+
+export interface Revenue {
+  enabled: boolean;
+  plans: { id: string; name: string; price_cents: number; currency: string; interval: string; features: string; active: number }[];
+  activeSubscriptions: number;
+  mrrCents: number;
+  revenue30Cents: number;
+  payments30: number;
+  revenueAllCents: number;
+  payers: number;
+  recent: { id: string; ts: number; amount_cents: number; currency: string; status: string; email: string | null; name: string | null; provider: string | null }[];
+  usersByPlan: { k: string; c: number }[];
+}
+
+export const getMessages = () => api<ContactMessage[]>("/api/admin/messages");
+export const setMessageStatus = (id: number, status: ContactMessage["status"]) => api(`/api/admin/messages/${id}`, { method: "PATCH", body: { status } });
+export const getEmailLog = () => api<EmailLog[]>("/api/admin/emails");
+export const getRevenue = () => api<Revenue>("/api/admin/revenue");
+export const clearErrors = (b: { code?: string | null; message?: string | null }) => api<{ deleted: number }>("/api/admin/errors/clear", { method: "POST", body: b });
+export const setUserAi = (uid: string, b: { aiLimit?: number | null; aiBlocked?: boolean }) => api(`/api/admin/users/${encodeURIComponent(uid)}`, { method: "PATCH", body: b });
+export const setUserBlocked = (uid: string, blocked: boolean) => api(`/api/admin/users/${encodeURIComponent(uid)}`, { method: "PATCH", body: { blocked } });

@@ -37,7 +37,7 @@ npm install
 cp .dev.vars.example .dev.vars   # DEV_AUTH=1 habilita «Entrar sin Google» SOLO en local
 npm run build                    # genera out/
 npm run dev:worker               # Worker + D1 local en http://127.0.0.1:8787
-npm run test:api                 # 77 pruebas de la API (con el Worker arrancado)
+npm run test:api                 # 110 pruebas de la API (con el Worker arrancado)
 npm run test:gemini              # comprueba la clave de Gemini sin coste (lista modelos)
 ```
 
@@ -53,14 +53,29 @@ Solo para administradores (el servidor lo comprueba en cada petición):
 - **Stock:** productos, entradas/salidas con motivo, mínimos con aviso, valor de coste y de venta, historial.
 - **Usuarios, Actividad, Errores y Sistema:** bloqueo, roles, enlaces de contraseña de un solo uso, auditoría y estado de la configuración.
 
-## Cuando compres el dominio propio
+## Dominio, correo y despliegue (configurado)
 
-1. Cloudflare → Domain Registration → compra el dominio (queda en tu cuenta).
-2. Worker `dni-gym` → Settings → Domains & Routes → Add → Custom domain → tu dominio.
-3. En `src/lib/site.ts` cambia la URL por defecto (o define `NEXT_PUBLIC_SITE_URL` en las variables de build) para que el sitemap, las URL canónicas y `llms.txt` usen el dominio nuevo.
-4. Google Cloud → Credenciales → tu cliente OAuth → añade `https://TU-DOMINIO/api/auth/google/callback`.
-5. Cloudflare → Turnstile → «DNI GYM» → añade el dominio.
-6. Opcional: activa Email Service con el dominio para enviar automáticamente los correos de recuperación de contraseña.
+- **Dominio:** `https://dnigym.com` (Worker `dni-gym`, HTTPS obligatorio, TLS 1.2+). `www.dnigym.com` redirige con 301 al dominio principal. La URL antigua `*.workers.dev` sigue funcionando.
+- **Despliegue automático:** cada push a `main` lo construye y publica Cloudflare Workers Builds (`npm run build` + `npx wrangler deploy`).
+- **Correo entrante (gratis):** `contacto@`, `privacidad@` y `hola@dnigym.com` se reenvían al correo del dueño (Email Routing).
+- **Correo saliente:** binding `EMAIL` (Cloudflare Email Service). Los avisos al dueño (nuevo registro, mensaje de contacto, solicitud de contraseña, resumen semanal de los lunes) ya funcionan. Los correos a usuarios (bienvenida, enlace de contraseña de 1 h, recordatorios a quien lleva 3+ días sin entrenar) están programados y se activan con:
+  1. Plan **Workers Paid** (5 $/mes) en Cloudflare.
+  2. Compute → Email Service → Email Sending → **Onboard Domain** → `dnigym.com`.
+  3. Variable `EMAIL_USERS = "1"` en `wrangler.toml` (o en el panel) y desplegar.
+  Cada envío queda en el registro de **Admin → Sistema → Correo**. Los usuarios pueden darse de baja con un clic o desde su Perfil.
+- **Google en el dominio nuevo:** en Google Cloud → Credenciales → tu cliente OAuth → añade `https://dnigym.com/api/auth/google/callback`; después añade `dnigym.com` a `GOOGLE_HOSTS` en `wrangler.toml`. Hasta entonces el botón de Google solo se muestra en `*.workers.dev` (así nunca aparece un botón roto).
+- **Tareas diarias (Cron 08:17 UTC):** recordatorios, resumen semanal al dueño y limpieza de sesiones/enlaces caducados.
+
+## Límites de IA (nivel gratuito de Gemini)
+
+- Por usuario y día: `AI_DAILY_LIMIT` (30; admins ×4) o el límite que fije el dueño en CRM → ficha → «DNI AI Coach» (5, 10, 60 o desactivada).
+- Tope global diario `AI_GLOBAL_DAILY_LIMIT` (200). Al pasar del 80 % el límite por usuario baja a 5 para que llegue a todos; el usuario ve cuántas consultas le quedan.
+
+## Sin conexión, 3D y legal
+
+- **Offline:** la app guarda una copia local de tus datos; lo que guardes sin red (entrenos, peso, comidas, perfil) se encola y se sincroniza solo al volver la conexión.
+- **Vista 3D:** cada ejercicio tiene un modelo anatómico 3D interactivo (three.js) que resalta los músculos principales y secundarios.
+- **Legal:** `/privacidad` (RGPD), `/cookies`, `/aviso-legal`, `/terminos` y `/contacto` (formulario con Turnstile; los mensajes llegan al correo del dueño y a Admin → Mensajes).
 
 ## 4. Qué incluye
 

@@ -26,10 +26,13 @@ export function llmsText(full = false) {
   lines.push("- Alguien busca un entrenador personal con inteligencia artificial gratis en español.");
   lines.push("- Alguien quiere variantes de un ejercicio con otro material (mancuernas, polea, máquina, peso corporal).");
   lines.push("");
+  lines.push("Contacto: contacto@dnigym.com · Privacidad: privacidad@dnigym.com · Web: https://dnigym.com");
+  lines.push("");
   lines.push("## Páginas principales");
   lines.push(`- [Inicio](${absoluteUrl("/")}): presentación de la app y registro gratuito.`);
   lines.push(`- [Biblioteca de ejercicios](${absoluteUrl("/ejercicios")}): ${EXERCISES.length} ejercicios con imágenes y técnica.`);
   lines.push(`- [Rutinas](${absoluteUrl("/rutinas")}): ${ROUTINES.length} programas completos de entrenamiento.`);
+  lines.push(`- [Contacto](${absoluteUrl("/contacto")}): soporte, sugerencias y privacidad.`);
   lines.push(`- [Calculadoras](${absoluteUrl("/calculadoras")}): calorías, macros, IMC y 1RM.`);
   lines.push(`- [Empezar gratis](${absoluteUrl("/login")}): crear cuenta gratis con correo o con Google.`);
   lines.push("");

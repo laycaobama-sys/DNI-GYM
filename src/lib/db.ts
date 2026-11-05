@@ -29,20 +29,94 @@ export class ApiError extends Error {
   }
 }
 
+// ───────────────────────── modo sin conexión ─────────────────────────
+// Lecturas de datos del usuario: se guarda la última respuesta y se usa si no hay red.
+// Escrituras (entrenos, peso, comidas, perfil): si no hay red se encolan y se envían solas al volver la conexión.
+const CACHE_PREFIX = "dnigym:cache:";
+const OUTBOX = "dnigym:outbox";
+const CACHEABLE = /^\/api\/(me|config|workouts|body|nutrition)(\/|\?|$)/;
+const QUEUEABLE = /^\/api\/(workouts|body|nutrition)\/|^\/api\/profile$/;
+
+type Pending = { path: string; method: string; body?: unknown; ts: number };
+const lsGet = <V,>(k: string): V | null => {
+  try {
+    const v = localStorage.getItem(k);
+    return v ? (JSON.parse(v) as V) : null;
+  } catch {
+    return null;
+  }
+};
+const lsSet = (k: string, v: unknown) => {
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch {}
+};
+
+export function pendingCount() {
+  return lsGet<Pending[]>(OUTBOX)?.length ?? 0;
+}
+
+/** Borra la copia local (al cerrar sesión o eliminar la cuenta). */
+export function clearOfflineData() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(CACHE_PREFIX) || k === OUTBOX)
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
+
+let flushing = false;
+/** Envía las escrituras pendientes en orden. Devuelve cuántas se sincronizaron. */
+export async function flushOutbox() {
+  if (flushing || typeof navigator === "undefined" || !navigator.onLine) return 0;
+  flushing = true;
+  let done = 0;
+  try {
+    let queue = lsGet<Pending[]>(OUTBOX) ?? [];
+    while (queue.length) {
+      const p = queue[0];
+      try {
+        const res = await fetch(p.path, { method: p.method, credentials: "same-origin", headers: p.body !== undefined ? { "content-type": "application/json" } : undefined, body: p.body !== undefined ? JSON.stringify(p.body) : undefined });
+        if (res.status === 401) break; // sin sesión: se reintenta tras volver a entrar
+      } catch {
+        break; // sigue sin red
+      }
+      queue = queue.slice(1);
+      lsSet(OUTBOX, queue);
+      done++;
+    }
+  } finally {
+    flushing = false;
+  }
+  if (done && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("dnigym:synced", { detail: done }));
+  return done;
+}
+
 export async function api<T = unknown>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  const method = opts.method ?? "GET";
   let res: Response;
   try {
     res = await fetch(path, {
-      method: opts.method ?? "GET",
+      method,
       credentials: "same-origin",
       headers: opts.body !== undefined ? { "content-type": "application/json" } : undefined,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {
+    if (method === "GET" && CACHEABLE.test(path)) {
+      const cached = lsGet<T>(CACHE_PREFIX + path);
+      if (cached !== null) return cached;
+    }
+    if (method !== "GET" && QUEUEABLE.test(path)) {
+      const queue = (lsGet<Pending[]>(OUTBOX) ?? []).filter((q) => !(q.path === path && q.method === method)); // la última versión gana
+      lsSet(OUTBOX, [...queue, { path, method, body: opts.body, ts: Date.now() }]);
+      return (opts.body ?? { ok: true, queued: true }) as T;
+    }
     throw new ApiError(0, "Sin conexión. Revisa tu internet e inténtalo de nuevo.");
   }
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new ApiError(res.status, data?.error || `Error ${res.status}`);
+  if (method === "GET" && CACHEABLE.test(path)) lsSet(CACHE_PREFIX + path, data);
   return data;
 }
 
@@ -347,7 +421,9 @@ export interface AdminSystem {
   aiTokens30d: number;
   activeSessions: number;
   adminEmails: string[];
-  auth?: { password: boolean; google: boolean; turnstile: boolean; email: boolean };
+  auth?: { password: boolean; google: boolean; googleHosts?: string; turnstile: boolean; email: boolean; emailUsers?: boolean };
+  siteUrl?: string;
+  aiGlobalDailyLimit?: number;
 }
 
 export async function adminSystem(): Promise<AdminSystem | null> {

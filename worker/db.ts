@@ -1,7 +1,7 @@
 import type { Env } from "./env";
 
 /** Versión del esquema. Súbela y añade pasos en MIGRATIONS para evolucionarlo sin perder datos. */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const MIGRATIONS: Record<number, string[]> = {
   1: [
@@ -157,6 +157,68 @@ const MIGRATIONS: Record<number, string[]> = {
     `CREATE INDEX IF NOT EXISTS users_created ON users(created_at)`,
     `CREATE INDEX IF NOT EXISTS events_type_ts ON events(type, ts)`,
     `CREATE INDEX IF NOT EXISTS workouts_date ON workouts(date)`,
+  ],
+  // v4: correo (registro de envíos y bajas), mensajes de contacto, límites de IA por usuario y base para pagos
+  4: [
+    `ALTER TABLE users ADD COLUMN unsub_token TEXT`,
+    `ALTER TABLE users ADD COLUMN last_reminder_at INTEGER`,
+    `ALTER TABLE users ADD COLUMN ai_limit INTEGER`,
+    `ALTER TABLE users ADD COLUMN ai_blocked INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'`,
+    `CREATE TABLE IF NOT EXISTS email_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      to_email TEXT NOT NULL,
+      status TEXT NOT NULL,
+      error TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS email_log_ts ON email_log(ts DESC)`,
+    `CREATE TABLE IF NOT EXISTS contact_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      user_id TEXT,
+      status TEXT NOT NULL DEFAULT 'nuevo'
+    )`,
+    `CREATE TABLE IF NOT EXISTS plans (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      price_cents INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'EUR',
+      interval TEXT NOT NULL DEFAULT 'month',
+      features TEXT NOT NULL DEFAULT '[]',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    )`,
+    `INSERT OR IGNORE INTO plans (id, name, price_cents, interval, features, created_at) VALUES ('free', 'Gratis', 0, 'month', '["Todo el entrenamiento","Nutrición","DNI AI Coach (límite diario)"]', strftime('%s','now')*1000)`,
+    `CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      plan_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      provider TEXT,
+      provider_ref TEXT,
+      started_at INTEGER NOT NULL,
+      current_period_end INTEGER,
+      canceled_at INTEGER
+    )`,
+    `CREATE INDEX IF NOT EXISTS subscriptions_user ON subscriptions(user_id)`,
+    `CREATE TABLE IF NOT EXISTS payments (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      subscription_id TEXT,
+      amount_cents INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'EUR',
+      status TEXT NOT NULL,
+      provider TEXT,
+      provider_ref TEXT,
+      ts INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS payments_ts ON payments(ts DESC)`,
   ],
 };
 

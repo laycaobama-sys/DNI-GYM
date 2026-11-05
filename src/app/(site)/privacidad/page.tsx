@@ -1,36 +1,50 @@
 import type { Metadata } from "next";
 import { Legal } from "@/components/legal";
 
-export const metadata: Metadata = { title: "Política de privacidad", alternates: { canonical: "/privacidad" } };
+export const metadata: Metadata = {
+  title: "Política de privacidad",
+  description: "Qué datos trata DNI GYM, para qué, dónde se guardan (Cloudflare), con quién se comparten y cómo ejercer tus derechos RGPD.",
+  alternates: { canonical: "/privacidad" },
+};
 
 export default function PrivacyPage() {
   return (
     <Legal title="Política de privacidad" updated="noviembre de 2026">
-      <p>En DNI GYM nos tomamos en serio tu privacidad. Esta política explica qué datos recogemos, para qué los usamos y cuáles son tus derechos.</p>
-      <h2>1. Datos que recogemos</h2>
+      <p>En DNI GYM nos tomamos en serio tu privacidad. Esta política explica qué datos tratamos, para qué, durante cuánto tiempo y cuáles son tus derechos según el Reglamento General de Protección de Datos (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD).</p>
+      <h2>1. Responsable del tratamiento</h2>
+      <p>El titular de DNI GYM (dnigym.com). Contacto para privacidad: <a href="mailto:privacidad@dnigym.com">privacidad@dnigym.com</a>.</p>
+      <h2>2. Datos que tratamos</h2>
       <ul>
-        <li><strong>Datos de tu cuenta:</strong> nombre y email. Si entras con Google, también tu foto de perfil y un identificador de Google. Tu contraseña nunca se guarda: solo un resumen cifrado (PBKDF2) que no permite recuperarla.</li>
-        <li><strong>Datos que introduces:</strong> entrenamientos, peso, medidas corporales, alimentos, objetivos y datos del perfil (sexo, año de nacimiento, altura, nivel de actividad).</li>
-        <li><strong>Datos técnicos:</strong> fecha de registro y de último acceso, página de entrada, sitio de procedencia, tipo de navegador y errores técnicos, para mantener el servicio y resolver incidencias de acceso.</li>
+        <li><strong>Cuenta:</strong> nombre y correo. Si entras con Google, también tu foto de perfil y un identificador de Google. Tu contraseña nunca se guarda: solo un resumen cifrado (PBKDF2) que no permite recuperarla.</li>
+        <li><strong>Datos que introduces:</strong> entrenamientos, peso, medidas, alimentos, objetivos y datos del perfil (sexo, año de nacimiento, altura, nivel de actividad).</li>
+        <li><strong>Datos de salud:</strong> peso, medidas y alimentación son datos de categoría especial. Los tratamos solo porque los introduces voluntariamente para ver tu evolución (consentimiento explícito, art. 9.2.a RGPD) y puedes borrarlos cuando quieras.</li>
+        <li><strong>Mensajes:</strong> lo que nos escribas por el formulario de contacto o por correo.</li>
+        <li><strong>Datos técnicos:</strong> fecha de registro y último acceso, página de entrada, procedencia, navegador y errores, para mantener el servicio seguro y resolver incidencias.</li>
       </ul>
-      <h2>2. Para qué los usamos</h2>
+      <h2>3. Para qué los usamos y base legal</h2>
       <ul>
-        <li>Prestarte el servicio: guardar tu historial y mostrarte tu progreso.</li>
-        <li>Calcular tus recomendaciones de calorías y macronutrientes.</li>
-        <li>Medir el uso de la web de forma agregada y detectar errores.</li>
-        <li>Si usas el DNI AI Coach, tus mensajes y un resumen de tus datos de entreno se envían a Google Gemini solo para generar la respuesta.</li>
+        <li>Prestarte el servicio (tu plan, progreso y nutrición) — ejecución del contrato (art. 6.1.b).</li>
+        <li>Enviarte correos de bienvenida, de contraseña y recordatorios de entreno — ejecución del contrato e interés legítimo; puedes darte de baja de los recordatorios con un clic o desde tu Perfil.</li>
+        <li>Seguridad, prevención de abuso y estadísticas agregadas — interés legítimo (art. 6.1.f).</li>
+        <li>Responder tus mensajes — tu consentimiento al escribirnos.</li>
       </ul>
       <p>No vendemos tus datos ni los usamos para publicidad.</p>
-      <h2>3. Dónde se guardan</h2>
-      <p>Los datos se almacenan en Cloudflare (Workers y base de datos D1, región Europa occidental), con cifrado en tránsito (HTTPS) y en reposo. Las sesiones usan cookies seguras (HttpOnly, Secure, SameSite) y el acceso está protegido contra bots con Cloudflare Turnstile. Solo tú y los administradores del servicio (para soporte técnico) podéis acceder a tus datos, y cada acción de administración queda registrada.</p>
-      <h2>4. Tus derechos</h2>
-      <p>Puedes acceder, rectificar, exportar y eliminar tus datos en cualquier momento desde <strong>Mi panel → Perfil</strong>. Al eliminar tu cuenta se borran tus entrenamientos, registros y perfil de forma permanente.</p>
-      <h2>5. Datos de salud</h2>
-      <p>La información sobre peso, medidas y alimentación la introduces voluntariamente y solo se usa para mostrarte tu evolución. La información de DNI GYM es orientativa y no sustituye el consejo médico o de un dietista-nutricionista.</p>
-      <h2>6. Almacenamiento local</h2>
-      <p>Usamos una cookie técnica imprescindible para mantener tu sesión iniciada y el almacenamiento local del navegador para guardar el entrenamiento en curso. No usamos cookies publicitarias ni de seguimiento.</p>
-      <h2>7. Contacto</h2>
-      <p>Para cualquier consulta sobre privacidad puedes escribirnos a través de los canales de contacto indicados en la web.</p>
+      <h2>4. DNI AI Coach</h2>
+      <p>Si usas el coach con IA, tu pregunta y un resumen de tus datos de entreno (sin tu correo ni datos de contacto) se envían a Google Gemini solo para generar la respuesta. La IA nunca cambia tus datos por su cuenta.</p>
+      <h2>5. Dónde se guardan y encargados del tratamiento</h2>
+      <ul>
+        <li><strong>Cloudflare</strong> (alojamiento, base de datos D1 en Europa occidental, correo y protección anti-bots Turnstile).</li>
+        <li><strong>Google</strong> (inicio de sesión con Google y Gemini para el coach con IA).</li>
+      </ul>
+      <p>Algunos de estos proveedores pueden tratar datos fuera del Espacio Económico Europeo con garantías adecuadas (cláusulas contractuales tipo y el Marco de Privacidad de Datos UE-EE. UU.). Todo viaja cifrado (HTTPS) y se guarda cifrado en reposo.</p>
+      <h2>6. Cuánto tiempo los conservamos</h2>
+      <p>Mientras tengas cuenta. Al eliminarla, borramos de inmediato tu perfil, entrenamientos, registros, nutrición e historial del coach. Los registros técnicos se conservan como máximo 12 meses.</p>
+      <h2>7. Tus derechos</h2>
+      <p>Puedes acceder, rectificar, exportar (portabilidad), oponerte, limitar y suprimir tus datos. La mayoría lo puedes hacer tú mismo en <strong>Mi panel → Perfil</strong> (exportar o eliminar la cuenta). Para el resto, escribe a <a href="mailto:privacidad@dnigym.com">privacidad@dnigym.com</a>. Si no quedas satisfecho, puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p>
+      <h2>8. Menores</h2>
+      <p>DNI GYM está dirigido a mayores de 14 años. Si eres menor de esa edad, necesitas el consentimiento de tus padres o tutores.</p>
+      <h2>9. Cookies</h2>
+      <p>Solo usamos cookies técnicas imprescindibles. Detalles en la <a href="/cookies/">política de cookies</a>.</p>
     </Legal>
   );
 }

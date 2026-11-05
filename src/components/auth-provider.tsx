@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { ApiError, api, backendEnabled, demoLogin, demoProfile, deleteUserData, updateProfile as dbUpdateProfile } from "@/lib/db";
+import { ApiError, api, backendEnabled, clearOfflineData, demoLogin, demoProfile, deleteUserData, updateProfile as dbUpdateProfile } from "@/lib/db";
 import type { UserProfile } from "@/lib/types";
 
 export interface SessionUser {
@@ -32,7 +32,7 @@ interface AuthState {
   devAuth: boolean;
   signUp: (d: { name: string; email: string; password: string; turnstile?: string; acceptTerms: boolean }) => Promise<SessionReply>;
   signIn: (d: { email: string; password: string; turnstile?: string }) => Promise<SessionReply>;
-  requestReset: (d: { email: string; turnstile?: string }) => Promise<void>;
+  requestReset: (d: { email: string; turnstile?: string }) => Promise<{ emailed: boolean }>;
   resetPassword: (d: { token: string; password: string }) => Promise<SessionReply>;
   changePassword: (d: { current?: string; password: string }) => Promise<void>;
   signInWithGoogle: () => void;
@@ -129,8 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = useCallback<AuthState["resetPassword"]>((d) => session("/api/auth/reset", d), [session]);
 
   const requestReset = useCallback<AuthState["requestReset"]>(async (d) => {
-    if (!backendEnabled) return;
-    await api("/api/auth/forgot", { method: "POST", body: d });
+    if (!backendEnabled) return { emailed: false };
+    const r = await api<{ emailed?: boolean }>("/api/auth/forgot", { method: "POST", body: d });
+    return { emailed: Boolean(r.emailed) };
   }, []);
 
   const changePassword = useCallback<AuthState["changePassword"]>(
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     if (!backendEnabled) localStorage.removeItem(DEMO_SESSION_KEY);
     else await api("/api/auth/logout", { method: "POST" }).catch(() => {});
+    clearOfflineData();
     setProfile(null);
     setIsAdmin(false);
   }, []);
@@ -190,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!profile) return;
     await deleteUserData(profile.uid);
     if (!backendEnabled) localStorage.removeItem(DEMO_SESSION_KEY);
+    clearOfflineData();
     setProfile(null);
     setIsAdmin(false);
   }, [profile]);

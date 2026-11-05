@@ -192,6 +192,35 @@ const it2 = upd.data.items.find((i) => i.id === item.id);
 ok(it2.price === 39.9 && it2.stock === 3, "editar producto no permite saltarse el historial de stock");
 ok((await admin(`/api/admin/inventory/${item.id}`, { method: "DELETE" })).data.items.every((i) => i.id !== item.id), "eliminar producto");
 
+// ── contacto, correo, límites de IA, ingresos y errores ──
+ok((await anon("/api/contact", { method: "POST", body: { name: "A", email: "x", message: "hola" } })).status === 400, "contacto: datos no válidos rechazados");
+const ct = await anon("/api/contact", { method: "POST", body: { name: "Lucía Test", email: `lucia.${uniq}@test.dev`, subject: "Duda sobre mi plan", message: "¿Puedo cambiar de rutina a mitad de semana?" } });
+ok(ct.status === 200 && ct.data.ok === true, "contacto: mensaje enviado");
+const msgs = await admin("/api/admin/messages");
+const myMsg = msgs.data.find((x) => x.email === `lucia.${uniq}@test.dev`);
+ok(msgs.status === 200 && myMsg && myMsg.status === "nuevo", "el dueño ve el mensaje de contacto");
+ok((await admin(`/api/admin/messages/${myMsg.id}`, { method: "PATCH", body: { status: "resuelto" } })).status === 200, "marcar mensaje como resuelto");
+ok((await a("/api/admin/messages")).status === 403, "un usuario no ve los mensajes");
+ok((await admin("/api/admin/emails")).status === 200, "registro de correos visible para el dueño");
+ok((await anon("/api/email/unsubscribe?t=token-falso-123456789")).status === 200, "enlace de baja inválido responde sin error");
+const q0 = await a("/api/ai/quota");
+ok(q0.status === 200 && q0.data.limit > 0 && q0.data.remaining <= q0.data.limit, "cuota de IA del usuario");
+const aid = (await a("/api/me")).data.profile.uid;
+ok((await admin(`/api/admin/users/${aid}`, { method: "PATCH", body: { aiLimit: 5 } })).data.aiLimit === 5, "el dueño fija un límite de IA a un usuario");
+ok((await a("/api/ai/quota")).data.limit === 5, "el límite personal se aplica");
+ok((await admin(`/api/admin/users/${aid}`, { method: "PATCH", body: { aiBlocked: true } })).data.aiBlocked === true, "el dueño desactiva la IA a un usuario");
+ok((await a("/api/ai/chat", { method: "POST", body: { message: "hola" } })).status === 403, "con la IA desactivada no puede usarla");
+await admin(`/api/admin/users/${aid}`, { method: "PATCH", body: { aiBlocked: false, aiLimit: null } });
+ok((await a("/api/ai/quota")).data.blocked === false, "reactivar la IA");
+const rev = await admin("/api/admin/revenue");
+ok(rev.status === 200 && rev.data.enabled === false && rev.data.mrrCents === 0 && rev.data.plans.some((p) => p.id === "free"), "ingresos preparados (sin datos inventados)");
+ok((await a("/api/admin/revenue")).status === 403, "un usuario no ve los ingresos");
+await anon("/api/events", { method: "POST", body: { type: "client_error", message: `fallo-prueba-${uniq}` } });
+const clr = await admin("/api/admin/errors/clear", { method: "POST", body: { message: `fallo-prueba-${uniq}` } });
+ok(clr.status === 200 && clr.data.deleted >= 1, "el dueño marca errores como resueltos");
+const cfg2 = (await anon("/api/config")).data;
+ok(cfg2.email && typeof cfg2.email.users === "boolean", "configuración de correo publicada");
+
 ok((await a("/api/auth/logout", { method: "POST" })).status === 200, "cerrar sesión");
 ok((await a("/api/workouts")).status === 401, "tras cerrar sesión no hay acceso");
 await a("/api/auth/dev", { method: "POST", body: { email: `ana.${uniq}@test.dev` } });

@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, MessageSquarePlus, Search, Sparkles, Tag, X } from "lucide-react";
+import { Ban, Bot, CheckCircle2, Download, MessageSquarePlus, Search, ShieldAlert, Sparkles, Tag, X } from "lucide-react";
 import { Avatar } from "@/components/app-shell";
 import { Markdown } from "@/components/ai-chat";
 import { Badge, Button, Card, Modal, Spinner, cn } from "@/components/ui";
-import { STAGE_META, addNote, customerAi, getCrm, getNotes, setTags, type CrmNote, type Customer, type Stage } from "@/lib/admin-api";
+import { STAGE_META, addNote, customerAi, getCrm, getNotes, setTags, setUserAi, setUserBlocked, type CrmNote, type Customer, type Stage } from "@/lib/admin-api";
+import { useAuth } from "@/components/auth-provider";
 import { fmtDate, fmtDateTime, fmtNumber, timeAgo } from "@/lib/fitness";
 
 const STAGES: Stage[] = ["nuevo", "activo", "en_riesgo", "inactivo", "bloqueado"];
@@ -148,6 +149,9 @@ function CustomerSheet({ c, onClose, onChange }: { c: Customer; onClose: () => v
   const [ai, setAi] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiErr, setAiErr] = useState<string | null>(null);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const { profile } = useAuth();
+  const isSelf = profile?.uid === c.uid;
 
   useEffect(() => {
     getNotes(c.uid).then(setNotes).catch(() => setNotes([]));
@@ -197,6 +201,60 @@ function CustomerSheet({ c, onClose, onChange }: { c: Customer; onClose: () => v
             </div>
           ))}
         </dl>
+
+        <section className="rounded-2xl border border-line p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold"><ShieldAlert className="size-4 text-accent" /> Control de la cuenta</h3>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-xs text-muted">Acceso a DNI GYM</p>
+              {c.blocked ? (
+                <Button size="sm" variant="secondary" className="mt-1.5" onClick={async () => { await setUserBlocked(c.uid, false); onChange({ ...c, blocked: false, stage: "activo" }); }}>
+                  <CheckCircle2 className="size-4" /> Desbloquear
+                </Button>
+              ) : confirmBlock ? (
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  <Button size="sm" variant="danger" onClick={async () => { await setUserBlocked(c.uid, true); setConfirmBlock(false); onChange({ ...c, blocked: true, stage: "bloqueado" }); }}>
+                    <Ban className="size-4" /> Sí, bloquear
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmBlock(false)}>Cancelar</Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="danger" className="mt-1.5" disabled={isSelf} onClick={() => setConfirmBlock(true)}>
+                  <Ban className="size-4" /> Bloquear acceso
+                </Button>
+              )}
+              <p className="mt-1 text-[11px] text-muted">Al bloquear se cierran todas sus sesiones al instante.</p>
+            </div>
+            <div>
+              <p className="flex items-center gap-1.5 text-xs text-muted"><Bot className="size-3.5" /> DNI AI Coach</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <select
+                  className="input !w-auto !py-1.5 text-sm"
+                  value={c.aiBlocked ? "off" : c.aiLimit == null ? "default" : String(c.aiLimit)}
+                  onChange={async (e) => {
+                    const v = e.target.value;
+                    if (v === "off") {
+                      await setUserAi(c.uid, { aiBlocked: true });
+                      onChange({ ...c, aiBlocked: true });
+                    } else {
+                      const aiLimit = v === "default" ? null : Number(v);
+                      await setUserAi(c.uid, { aiBlocked: false, aiLimit });
+                      onChange({ ...c, aiBlocked: false, aiLimit });
+                    }
+                  }}
+                  aria-label="Límite diario de IA"
+                >
+                  <option value="default">Límite normal</option>
+                  <option value="5">5 consultas/día</option>
+                  <option value="10">10 consultas/día</option>
+                  <option value="60">60 consultas/día</option>
+                  <option value="off">IA desactivada</option>
+                </select>
+              </div>
+              <p className="mt-1 text-[11px] text-muted">{c.ai30} consultas en los últimos 30 días.</p>
+            </div>
+          </div>
+        </section>
 
         <section>
           <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold"><Tag className="size-4 text-accent" /> Etiquetas</h3>
