@@ -6,8 +6,13 @@ import path from "node:path";
 import sharp from "sharp";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const src = await fs.readFile(path.join(root, "src/data/exercises.ts"), "utf8");
-const ids = [...src.matchAll(/src:\s*"([^"]+)"/g)].map((m) => m[1]);
+const main = await fs.readFile(path.join(root, "src/data/exercises.ts"), "utf8");
+const extra = await fs.readFile(path.join(root, "src/data/exercises-extra.ts"), "utf8");
+const ids = [
+  ...[...main.matchAll(/src:\s*"([^"]+)"/g)].map((m) => m[1]),
+  // filas compactas: [slug, nombre, grupo, src, ...]
+  ...[...extra.matchAll(/^\s*\["[^"]+", "[^"]+", "(?:pecho|espalda|piernas|gluteos|hombros|biceps|triceps|abdomen|cardio)", "([^"]+)"/gm)].map((m) => m[1]),
+];
 const outDir = path.join(root, "public/ejercicios");
 await fs.mkdir(outDir, { recursive: true });
 const base = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";

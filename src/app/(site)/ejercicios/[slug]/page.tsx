@@ -34,7 +34,12 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
   const { slug } = await params;
   const e = getExercise(slug);
   if (!e) notFound();
-  const related = EXERCISES.filter((x) => x.group === e.group && x.slug !== e.slug).slice(0, 4);
+  // Variantes: mismo grupo y mismo músculo principal, priorizando otro material (casa, máquina, polea…)
+  const key = (m: string) => m.split(" ")[0].toLowerCase();
+  const variants = EXERCISES.filter((x) => x.group === e.group && x.slug !== e.slug && x.primary.some((p) => e.primary.some((q) => key(p) === key(q))))
+    .sort((a, b) => Number(a.equipment === e.equipment) - Number(b.equipment === e.equipment))
+    .slice(0, 8);
+  const related = EXERCISES.filter((x) => x.group === e.group && x.slug !== e.slug && !variants.includes(x)).slice(0, 4);
   const inRoutines = ROUTINES.filter((r) => r.days.some((d) => d.items.some((it) => it.slug === e.slug)));
   const [img0, img1] = exerciseImages(e);
 
@@ -155,6 +160,18 @@ export default async function ExercisePage({ params }: PageProps<"/ejercicios/[s
               <Link key={r.slug} href={`/rutinas/${r.slug}`} className="rounded-full border border-line px-4 py-1.5 text-sm text-ink-2 hover:border-accent/40 hover:text-ink">
                 {r.name}
               </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {variants.length > 0 && (
+        <section className="mt-14">
+          <h2 className="font-display text-xl font-semibold">Variantes de {e.name.toLowerCase()}</h2>
+          <p className="mt-1 text-sm text-muted">Mismo músculo principal con otro material o dificultad: ideales para cambiar el estímulo o entrenar en casa.</p>
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {variants.map((r) => (
+              <ExerciseCard key={r.slug} e={r} />
             ))}
           </div>
         </section>

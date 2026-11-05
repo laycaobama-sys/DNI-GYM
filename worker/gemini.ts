@@ -3,7 +3,7 @@
 import { GoogleGenAI, type Content } from "@google/genai";
 import { HttpError } from "./http";
 
-export const DEFAULT_MODEL = "gemini-2.5-pro";
+export const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export interface GenOptions {
   system?: string;

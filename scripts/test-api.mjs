@@ -165,6 +165,33 @@ ok((await p3("/api/auth/password", { method: "POST", body: { current: "Renovada2
 ok((await p3("/api/me")).data.profile?.email === pwEmail, "la sesión actual sigue activa tras cambiarla");
 ok((await anon("/api/auth/login", { method: "POST", body: { email: pwEmail, password: "Cambio2026gymx" } })).status === 200, "login con la contraseña nueva");
 
+// ── centro de control: métricas, CRM, agentes e inventario ──
+ok((await a("/api/admin/metrics")).status === 403, "un usuario normal no ve las métricas");
+const met = await admin("/api/admin/metrics?days=30");
+ok(met.status === 200 && met.data.totals.users >= 3 && met.data.series.signups.length === 30 && met.data.funnel.length === 5, "métricas agregadas en el servidor");
+ok(met.data.catalog.exercises >= 140 && met.data.catalog.routines >= 14, "el catálogo publicado aparece en las métricas");
+const crm = await admin("/api/admin/crm");
+const ana = crm.data.find((c) => c.email === `ana.${uniq}@test.dev`);
+ok(crm.status === 200 && ana && ["nuevo", "activo"].includes(ana.stage) && ana.health >= 0 && ana.health <= 100, "CRM con etapa y salud de cada cliente");
+ok(!JSON.stringify(crm.data).includes("pbkdf2"), "el CRM no expone contraseñas");
+const tg = await admin(`/api/admin/crm/${ana.uid}/tags`, { method: "PUT", body: { tags: ["VIP", "VIP", " Feedback "] } });
+ok(tg.status === 200 && tg.data.tags.join() === "VIP,Feedback", "etiquetas del CRM sin duplicados");
+const nt = await admin(`/api/admin/crm/${ana.uid}/notes`, { method: "POST", body: { text: "Le escribí para animarle" } });
+ok(nt.status === 200 && nt.data[0].text === "Le escribí para animarle", "notas internas del CRM");
+ok((await a(`/api/admin/crm/${ana.uid}/notes`)).status === 403, "un usuario no puede leer notas del CRM");
+ok((await admin("/api/admin/agents/inventado", { method: "POST", body: {} })).status === 404, "agente inexistente rechazado");
+const inv1 = await admin("/api/admin/inventory", { method: "POST", body: { name: "Proteína whey", category: "Suplementos", stock: 10, min_stock: 4, cost: 18.5, price: 34.9 } });
+const item = inv1.data.items.find((i) => i.name === "Proteína whey");
+ok(inv1.status === 200 && item && item.stock === 10 && inv1.data.moves.some((m) => m.reason === "Stock inicial"), "crear producto con stock inicial");
+ok((await admin(`/api/admin/inventory/${item.id}/move`, { method: "POST", body: { delta: -7, reason: "Venta" } })).data.items.find((i) => i.id === item.id).stock === 3, "salida de stock");
+ok((await admin(`/api/admin/inventory/${item.id}/move`, { method: "POST", body: { delta: -50 } })).status === 400, "no se puede dejar el stock en negativo");
+ok((await admin("/api/admin/inventory", { method: "POST", body: { name: "", stock: -1 } })).status === 400, "producto no válido rechazado");
+ok((await a("/api/admin/inventory")).status === 403, "un usuario normal no ve el inventario");
+const upd = await admin(`/api/admin/inventory/${item.id}`, { method: "PATCH", body: { price: 39.9, stock: 999 } });
+const it2 = upd.data.items.find((i) => i.id === item.id);
+ok(it2.price === 39.9 && it2.stock === 3, "editar producto no permite saltarse el historial de stock");
+ok((await admin(`/api/admin/inventory/${item.id}`, { method: "DELETE" })).data.items.every((i) => i.id !== item.id), "eliminar producto");
+
 ok((await a("/api/auth/logout", { method: "POST" })).status === 200, "cerrar sesión");
 ok((await a("/api/workouts")).status === 401, "tras cerrar sesión no hay acceso");
 await a("/api/auth/dev", { method: "POST", body: { email: `ana.${uniq}@test.dev` } });

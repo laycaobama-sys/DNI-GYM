@@ -1,6 +1,7 @@
 // Biblioteca de ejercicios de DNI GYM.
 // Las imágenes de demostración proceden de free-exercise-db (dominio público, Unlicense)
 // y se sirven desde /public/ejercicios/<src>-0.webp y <src>-1.webp (posición inicial / final).
+import { EXTRA_EXERCISES } from "./exercises-extra";
 
 export type MuscleGroup =
   | "pecho"
@@ -1684,6 +1685,7 @@ export const EXERCISES: Exercise[] = [
     mistakes: ["Separar la sentadilla y el press en dos movimientos."],
     prescription: "4 × 10",
   }),
+  ...EXTRA_EXERCISES,
 ];
 
 export const EXERCISE_BY_SLUG: Record<string, Exercise> = Object.fromEntries(

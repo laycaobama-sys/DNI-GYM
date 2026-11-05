@@ -1,7 +1,7 @@
 import type { Env } from "./env";
 
 /** Versión del esquema. Súbela y añade pasos en MIGRATIONS para evolucionarlo sin perder datos. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const MIGRATIONS: Record<number, string[]> = {
   1: [
@@ -114,6 +114,49 @@ const MIGRATIONS: Record<number, string[]> = {
       created_by TEXT
     )`,
     `CREATE INDEX IF NOT EXISTS auth_tokens_user ON auth_tokens(user_id)`,
+  ],
+  // v3: CRM (etiquetas y notas), inventario (stock) e índices para métricas
+  3: [
+    `CREATE TABLE IF NOT EXISTS crm (
+      user_id TEXT PRIMARY KEY,
+      tags TEXT NOT NULL DEFAULT '[]',
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS crm_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      author_email TEXT,
+      text TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS crm_notes_user ON crm_notes(user_id, id DESC)`,
+    `CREATE TABLE IF NOT EXISTS inventory_items (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'General',
+      sku TEXT,
+      unit TEXT NOT NULL DEFAULT 'uds',
+      stock REAL NOT NULL DEFAULT 0,
+      min_stock REAL NOT NULL DEFAULT 0,
+      cost REAL,
+      price REAL,
+      location TEXT,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS inventory_moves (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      delta REAL NOT NULL,
+      reason TEXT,
+      actor_email TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS inventory_moves_item ON inventory_moves(item_id, id DESC)`,
+    `CREATE INDEX IF NOT EXISTS users_created ON users(created_at)`,
+    `CREATE INDEX IF NOT EXISTS events_type_ts ON events(type, ts)`,
+    `CREATE INDEX IF NOT EXISTS workouts_date ON workouts(date)`,
   ],
 };
 

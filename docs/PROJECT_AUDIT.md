@@ -20,7 +20,7 @@ Estructura: `src/app` (rutas), `src/components` (UI), `src/data` (ejercicios, ru
 
 ## 2. Rutas existentes (27 páginas + 6 rutas de texto/SEO)
 
-Públicas: `/`, `/ejercicios`, `/ejercicios/[slug]` (84), `/rutinas`, `/rutinas/[slug]` (6), `/retos`, `/retos/[slug]` (4), `/calculadoras`, `/calculadoras/[slug]` (4), `/guias`, `/guias/[slug]` (6), `/privacidad`, `/terminos`, `/login`.
+Públicas: `/`, `/ejercicios`, `/ejercicios/[slug]` (148), `/rutinas`, `/rutinas/[slug]` (14), `/retos`, `/retos/[slug]` (4), `/calculadoras`, `/calculadoras/[slug]` (4), `/guias`, `/guias/[slug]` (6), `/privacidad`, `/terminos`, `/login`.
 Privadas: `/bienvenida`, `/panel` (+ explorar, entrenar, retos, ejercicios, nutricion, progreso, historial, cuerpo, perfil), `/admin`.
 SEO: `sitemap.xml`, `robots.txt`, `manifest.webmanifest`, `opengraph-image`, `llms.txt`, `llms-full.txt`.
 
@@ -36,7 +36,7 @@ Leyenda: ✅ implementada y comprobada · 🟡 parcial · 🎨 visual sin lógic
 | Dashboard | ✅ | entreno de hoy, semana, anillos, menú, retos, logros, gráficas |
 | Entreno guiado | ✅ | adaptación por tiempo/lugar/molestias, sustitución, 1RM, récords, diario |
 | Registro manual de entrenos | ✅ | borrador local, temporizador de descanso |
-| Biblioteca de ejercicios | ✅ (84) | técnica, mapa muscular, FAQ; lejos de 1.000 (ver roadmap) |
+| Biblioteca de ejercicios | ✅ (148, con variantes) | técnica, mapa muscular, FAQ; lejos de 1.000 (ver roadmap) |
 | Rutinas prediseñadas | ✅ (6) | — |
 | Rutinas propias editables | 🟡 | se pueden crear entrenos libres, no guardar plantillas propias |
 | Superseries / series descendentes / RIR / RPE | ❌ | roadmap FASE 3 |
@@ -63,7 +63,7 @@ Leyenda: ✅ implementada y comprobada · 🟡 parcial · 🎨 visual sin lógic
 | 4 | Media | iOS: `env(safe-area-inset-*)` vale 0 sin `viewport-fit=cover` → la barra inferior podía quedar tapada | Añadir `viewportFit: "cover"` |
 | 5 | Media | Sin tests automáticos | Script de pruebas de API contra `wrangler dev` + Playwright |
 | 6 | Baja | Identidad en verde lima; el documento de marca pide naranja solar | Cambio de tokens (FASE 1) |
-| 7 | Baja | El catálogo (84) no alcanza el objetivo de 1.000 ejercicios | Roadmap: importar y traducir catálogo con licencia abierta, verificando cada ficha |
+| 7 | Baja | El catálogo (148) aún no alcanza el objetivo de 1.000 ejercicios | Roadmap: importar y traducir catálogo con licencia abierta, verificando cada ficha |
 
 ## 5. Seguridad
 

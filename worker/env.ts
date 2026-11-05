@@ -8,6 +8,8 @@ export interface Env {
   GEMINI_MODEL?: string;
   /** mensajes de IA por usuario y día */
   AI_DAILY_LIMIT?: string;
+  /** tope global de peticiones de IA al día (nivel gratuito de Gemini) */
+  AI_GLOBAL_DAILY_LIMIT?: string;
   /** Google OAuth (opcional): ID de cliente (variable) y secreto (secret) */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;

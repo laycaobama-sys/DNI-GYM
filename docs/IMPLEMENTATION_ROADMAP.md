@@ -6,7 +6,7 @@
 | 1 | Identidad naranja solar, tokens, logo | ✅ |
 | 2 | Dashboard, navegación, responsive 360–1920 | ✅ |
 | 3 | Entrenos: guiado, adaptación, sustitución, 1RM, récords | ✅ · Pendiente: plantillas propias guardadas, superseries, series descendentes, RIR/RPE por serie |
-| 4 | Biblioteca | ✅ 84 fichas · Pendiente: ampliar a 1.000+ con catálogo de licencia abierta (free-exercise-db, 873, Unlicense) traducido y revisado ficha a ficha |
+| 4 | Biblioteca | ✅ 148 fichas con variantes · Pendiente: ampliar a 1.000+ con catálogo de licencia abierta (free-exercise-db, 873, Unlicense) traducido y revisado ficha a ficha |
 | 5 | Nutrición: diario, macros, agua, menú diario | ✅ · Pendiente: recetas, lista de compra, código de barras (Open Food Facts), foto asistida por IA |
 | 6 | DNI AI Coach (Gemini) + IA de administración | ✅ en esta entrega (requiere el secreto `GEMINI_API_KEY`) |
 | 7 | Progreso | ✅ · Pendiente: fotos de progreso (R2 privado), informes exportables en PDF |

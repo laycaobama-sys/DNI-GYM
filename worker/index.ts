@@ -27,6 +27,23 @@ import {
   type UserRow,
 } from "./auth";
 import { DEFAULT_MODEL, createGeminiService, type ChatTurn } from "./gemini";
+import {
+  AGENTS,
+  CUSTOMER_SYSTEM,
+  agentContext,
+  crmAddNote,
+  crmList,
+  crmNotes,
+  crmSetTags,
+  customerContext,
+  inventoryCreate,
+  inventoryDelete,
+  inventoryList,
+  inventoryMove,
+  inventoryUpdate,
+  metrics,
+  type AgentId,
+} from "./admin";
 import { ADMIN_SYSTEM, COACH_SYSTEM, WORKOUT_SCHEMA, catalogText, userContext, validateWorkout } from "./coach";
 import { getCookie } from "./http";
 import { SESSION_COOKIE } from "./auth";
@@ -297,6 +314,10 @@ async function authRoutes(req: Request, env: Env, url: URL, path: string, m: str
 // ───────────────────────── IA ─────────────────────────
 
 async function checkAiQuota(env: Env, u: UserRow) {
+  // tope global diario para no salir del nivel gratuito de Gemini (por defecto 200 peticiones/día)
+  const global = await env.DB.prepare("SELECT COALESCE(SUM(requests),0) r FROM ai_usage WHERE day = ?").bind(today()).first<{ r: number }>();
+  if ((global?.r ?? 0) >= Number(env.AI_GLOBAL_DAILY_LIMIT || 200))
+    throw new HttpError(429, "La IA ha alcanzado su límite diario gratuito. Vuelve a intentarlo mañana.");
   const limit = Number(env.AI_DAILY_LIMIT || 30) * (u.role === "admin" ? 4 : 1);
   const row = await env.DB.prepare("SELECT requests FROM ai_usage WHERE user_id = ? AND day = ?").bind(u.id, today()).first<{ requests: number }>();
   if ((row?.requests ?? 0) >= limit) throw new HttpError(429, `Has llegado al límite de ${limit} consultas a la IA por hoy. Vuelve mañana.`);
@@ -677,6 +698,70 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
         auth: { password: true, google: googleEnabled(env), turnstile: Boolean(env.TURNSTILE_SECRET), email: false },
       });
     }
+    // ── centro de control: métricas, CRM, inventario y agentes ──
+    if (path === "/api/admin/metrics" && m === "GET") {
+      const days = Math.min(90, Math.max(7, Number(url.searchParams.get("days") || 30)));
+      return json(await metrics(env, days));
+    }
+    if (path === "/api/admin/crm" && m === "GET") return json(await crmList(env));
+    if (seg[1] === "crm" && seg[2] && seg[3] === "tags" && m === "PUT") {
+      const b = await readJson<{ tags?: unknown }>(req);
+      const tags = await crmSetTags(env, seg[2], b.tags);
+      await audit(env, admin, "crm.tags", seg[2], { tags });
+      return json({ tags });
+    }
+    if (seg[1] === "crm" && seg[2] && seg[3] === "notes" && m === "GET") return json(await crmNotes(env, seg[2]));
+    if (seg[1] === "crm" && seg[2] && seg[3] === "notes" && m === "POST") {
+      const b = await readJson<{ text?: unknown }>(req, 8_000);
+      return json(await crmAddNote(env, seg[2], admin.email, b.text));
+    }
+    if (seg[1] === "crm" && seg[2] && seg[3] === "ai" && m === "POST") {
+      await checkAiQuota(env, admin);
+      const g = gemini(env);
+      const usage = { tokens: 0 };
+      const ctx = await customerContext(env, seg[2]);
+      return sse(g.streamChat([], ctx, { system: CUSTOMER_SYSTEM, temperature: 0.5, maxOutputTokens: 900 }, usage), async () => {
+        await addAiUsage(env, admin.id, usage.tokens);
+        await audit(env, admin, "crm.ai", seg[2]);
+      });
+    }
+    if (seg[1] === "agents" && seg[2] && m === "POST") {
+      const id = seg[2] as AgentId;
+      if (!(id in AGENTS)) throw new HttpError(404, "Agente no encontrado");
+      const { message } = await readJson<{ message?: string }>(req, 8_000);
+      await checkAiQuota(env, admin);
+      const g = gemini(env);
+      const usage = { tokens: 0 };
+      const ctx = await agentContext(env, id, await platformContext(env));
+      const ask = String(message || "").trim().slice(0, 1500) || "Haz tu análisis completo con los datos actuales.";
+      return sse(g.streamChat([], `${ctx}\n\nPETICIÓN DEL DUEÑO: ${ask}`, { system: AGENTS[id].system, temperature: 0.5, maxOutputTokens: 1600 }, usage), async () => {
+        await addAiUsage(env, admin.id, usage.tokens);
+        await audit(env, admin, "agent.run", id, { q: ask.slice(0, 200) });
+      });
+    }
+    if (path === "/api/admin/inventory" && m === "GET") return json(await inventoryList(env));
+    if (path === "/api/admin/inventory" && m === "POST") {
+      const b = await readJson<Record<string, unknown>>(req, 8_000);
+      const id = await inventoryCreate(env, b, admin.email);
+      await audit(env, admin, "inventory.create", id, { name: b.name });
+      return json(await inventoryList(env));
+    }
+    if (seg[1] === "inventory" && seg[2] && seg[3] === "move" && m === "POST") {
+      const b = await readJson<{ delta?: unknown; reason?: unknown }>(req);
+      await inventoryMove(env, seg[2], b.delta, b.reason, admin.email);
+      return json(await inventoryList(env));
+    }
+    if (seg[1] === "inventory" && seg[2] && !seg[3] && m === "PATCH") {
+      await inventoryUpdate(env, seg[2], await readJson<Record<string, unknown>>(req, 8_000));
+      await audit(env, admin, "inventory.update", seg[2]);
+      return json(await inventoryList(env));
+    }
+    if (seg[1] === "inventory" && seg[2] && !seg[3] && m === "DELETE") {
+      await inventoryDelete(env, seg[2]);
+      await audit(env, admin, "inventory.delete", seg[2]);
+      return json(await inventoryList(env));
+    }
+
     if (path === "/api/admin/ai" && m === "POST") {
       const { message } = await readJson<{ message?: string }>(req, 8_000);
       const text = String(message || "").trim().slice(0, 2000);

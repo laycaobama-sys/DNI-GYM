@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "isolatedModules": true
   },
-  "include": ["./**/*.ts", "../src/data/exercises.ts", "../src/data/routines.ts"]
+  "include": ["./**/*.ts", "../src/data/exercises.ts", "../src/data/exercises-extra.ts", "../src/data/routines.ts"]
 }

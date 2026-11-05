@@ -38,6 +38,14 @@ const JOBS = [
   ["p-gluteos-y-piernas", "Barbell_Hip_Thrust-0", 900, 600, "center"],
   ["p-entrenamiento-en-casa-sin-material", "Mountain_Climbers-1", 900, 600, "center"],
   ["p-quema-grasa-hiit", "One-Arm_Kettlebell_Swings-1", 900, 600, "center"],
+  ["p-fuerza-5x5", "Barbell_Full_Squat-1", 900, 600, "center"],
+  ["p-rutina-5-dias-por-grupos", "Decline_Barbell_Bench_Press-1", 900, 600, "center"],
+  ["p-casa-con-mancuernas", "Dumbbell_Squat-1", 900, 600, "center"],
+  ["p-maquinas-para-principiantes", "Machine_Bench_Press-1", 900, 600, "center"],
+  ["p-express-30-minutos", "Battling_Ropes-1", 900, 600, "center"],
+  ["p-abdomen-y-core", "Jackknife_Sit-Up-1", 900, 600, "center"],
+  ["p-brazos-y-hombros", "EZ-Bar_Curl-1", 900, 600, "center"],
+  ["p-salud-y-movilidad-50", "Elliptical_Trainer-1", 900, 600, "center"],
 ];
 
 for (const [name, from, w, h, pos] of JOBS) {

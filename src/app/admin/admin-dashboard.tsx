@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Activity,
   AlertTriangle,
   ArrowLeft,
   Ban,
@@ -11,29 +10,28 @@ import {
   Copy,
   Database,
   Eye,
-  Globe,
-  LogIn,
   RefreshCw,
   Search,
   Shield,
   Sparkles,
   Trash2,
-  UserPlus,
-  Users,
   KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { AUTH_ERROR_MESSAGES } from "@/components/auth-provider";
 import { Avatar } from "@/components/app-shell";
-import { BarsChart, HBarList, TrendChart } from "@/components/charts";
+import { HBarList } from "@/components/charts";
 import { Logo } from "@/components/logo";
-import { Badge, Button, Card, CardHeader, Modal, Spinner, Stat, Tabs, cn } from "@/components/ui";
+import { Badge, Button, Card, CardHeader, Modal, Spinner, Tabs, cn } from "@/components/ui";
 import { adminAudit, adminDeleteEvent, adminListEvents, adminListUsers, adminResetLink, adminSetBlocked, adminSetRole, adminSystem, adminUserWorkouts, backendEnabled, type AdminSystem, type AuditEntry } from "@/lib/db";
-import { AiChat } from "@/components/ai-chat";
+import { CommandCenter } from "./command-center";
+import { Crm } from "./crm";
+import { Agents } from "./agents";
+import { Inventory } from "./inventory";
 import { addDays, dayKey, fmtDate, fmtDateTime, fmtNumber, timeAgo } from "@/lib/fitness";
 import type { AppEvent, EventType, UserProfile, Workout } from "@/lib/types";
 
-type Tab = "resumen" | "ia" | "usuarios" | "actividad" | "errores" | "sistema";
+type Tab = "resumen" | "crm" | "agentes" | "inventario" | "usuarios" | "actividad" | "errores" | "sistema";
 
 const EVENT_META: Record<EventType, { label: string; tone: "neutral" | "accent" | "good" | "warning" | "critical" | "info" }> = {
   signup: { label: "Registro", tone: "accent" },
@@ -59,6 +57,10 @@ const FIXES: Record<string, string> = {
   "google-token": "Google rechazó el intercambio del código. Revisa que el secreto de Google y la URL de redirección autorizada sean correctos.",
   "google-verify": "No se pudo verificar el token de Google. Si se repite, revisa el ID de cliente configurado.",
 };
+
+function DemoNote() {
+  return <p className="rounded-xl border border-sky/30 bg-sky/10 p-4 text-sm text-sky">Esta sección usa los datos reales de Cloudflare y no está disponible en el modo demostración.</p>;
+}
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -211,7 +213,9 @@ export function AdminDashboard() {
             onChange={setTab}
             items={[
               { value: "resumen", label: "Resumen" },
-              { value: "ia", label: <span className="flex items-center gap-1.5"><Sparkles className="size-3.5 text-accent" /> IA</span> },
+              { value: "crm", label: "CRM" },
+              { value: "agentes", label: <span className="flex items-center gap-1.5"><Sparkles className="size-3.5 text-accent" /> Agentes IA</span> },
+              { value: "inventario", label: "Stock" },
               { value: "usuarios", label: `Usuarios (${users.length})` },
               { value: "actividad", label: "Actividad" },
               { value: "errores", label: <span className="flex items-center gap-1.5">Errores {m.authErrors7 + m.clientErrors7 > 0 && <span className="rounded-full bg-critical px-1.5 text-[10px] font-bold text-white">{m.authErrors7 + m.clientErrors7}</span>}</span> },
@@ -238,55 +242,10 @@ export function AdminDashboard() {
           </div>
         ) : (
           <>
-            {tab === "resumen" && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                  <Stat label="Usuarios totales" value={fmtNumber(m.total)} icon={<Users className="size-4" />} hint={`+${m.new7} en 7 días`} />
-                  <Stat label="Activos hoy" value={fmtNumber(m.active1)} icon={<Activity className="size-4" />} hint={`${fmtNumber(m.active7)} en 7 d · ${fmtNumber(m.active30)} en 30 d`} />
-                  <Stat label="Visitas (7 días)" value={fmtNumber(m.visits7)} icon={<Globe className="size-4" />} hint="sesiones de navegador" />
-                  <Stat
-                    label="Éxito de acceso"
-                    value={`${fmtNumber(m.successRate)}%`}
-                    icon={<LogIn className="size-4" />}
-                    trend={m.authErrors7 ? { value: `${m.authErrors7} errores en 7 d`, good: false } : { value: "sin errores", good: true }}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                  <Stat label="Nuevos registros (7 d)" value={fmtNumber(m.new7)} icon={<UserPlus className="size-4" />} />
-                  <Stat label="Inicios de sesión (7 d)" value={fmtNumber(m.logins7)} icon={<LogIn className="size-4" />} />
-                  <Stat label="Entrenos guardados (7 d)" value={fmtNumber(m.workouts7)} icon={<CheckCircle2 className="size-4" />} />
-                  <Stat label="Perfil completado" value={m.total ? `${fmtNumber((m.onboarded / m.total) * 100)}%` : "—"} hint={`${m.blocked} bloqueados`} />
-                </div>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader title="Crecimiento de usuarios" subtitle="Total acumulado · 30 días" />
-                    <div className="p-3 pt-4">
-                      <TrendChart data={m.growth} unit="usuarios" digits={0} />
-                    </div>
-                  </Card>
-                  <Card>
-                    <CardHeader title="Visitas por día" subtitle="30 días" />
-                    <div className="p-3 pt-4">
-                      <BarsChart data={m.visitsDay} unit="visitas" color="#4cc3ff" />
-                    </div>
-                  </Card>
-                  <Card>
-                    <CardHeader title="Accesos por día" subtitle="Registros + inicios de sesión · 30 días" />
-                    <div className="p-3 pt-4">
-                      <BarsChart data={m.loginsDay} unit="accesos" />
-                    </div>
-                  </Card>
-                  <Card>
-                    <CardHeader title="De dónde llegan" subtitle="Origen de las visitas · 30 días" />
-                    <div className="p-5">{m.refs.length ? <HBarList items={m.refs} /> : <p className="text-sm text-muted">Sin datos todavía.</p>}</div>
-                  </Card>
-                </div>
-                <Card>
-                  <CardHeader title="Páginas de entrada más visitadas" subtitle="30 días" />
-                  <div className="p-5">{m.pages.length ? <HBarList items={m.pages} /> : <p className="text-sm text-muted">Sin datos todavía.</p>}</div>
-                </Card>
-              </div>
-            )}
+            {tab === "resumen" && (backendEnabled ? <CommandCenter /> : <DemoNote />)}
+            {tab === "crm" && (backendEnabled ? <Crm /> : <DemoNote />)}
+            {tab === "agentes" && (backendEnabled ? <Agents /> : <DemoNote />)}
+            {tab === "inventario" && (backendEnabled ? <Inventory /> : <DemoNote />)}
 
             {tab === "usuarios" && (
               <Card>
@@ -410,26 +369,6 @@ export function AdminDashboard() {
                   <EventList events={errors} onDelete={async (id) => { await adminDeleteEvent(id); setEvents((ev) => ev.filter((e) => e.id !== id)); }} />
                 </Card>
               </div>
-            )}
-
-            {tab === "ia" && (
-              <AiChat
-                endpoint="/api/admin/ai"
-                placeholder="Pregunta sobre tu app: usuarios, accesos, errores, crecimiento…"
-                suggestions={[
-                  "Resume el estado de DNI GYM esta semana",
-                  "¿Hay problemas de acceso que deba arreglar?",
-                  "¿Cómo va el crecimiento de usuarios y la retención?",
-                  "Dame 3 acciones para conseguir más usuarios activos",
-                ]}
-                intro={
-                  <div>
-                    <p className="font-athletic text-3xl font-extrabold uppercase italic">Analista IA de DNI GYM</p>
-                    <p className="mt-1 text-sm text-muted">Responde con los datos reales de tu plataforma (usuarios, accesos, errores y entrenos) y te propone acciones concretas.</p>
-                  </div>
-                }
-                disclaimer="Las respuestas se basan en las métricas de los últimos 30 días. Cada consulta queda registrada en la auditoría."
-              />
             )}
 
             {tab === "sistema" && (

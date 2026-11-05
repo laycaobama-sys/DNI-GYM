@@ -6,7 +6,7 @@ export const SITE = {
   title: "DNI GYM · Tu entrenador personal gratis para el gym y en casa",
   tagline: "Tu entrenador personal gratis · Gym y casa",
   description:
-    "DNI GYM es tu entrenador personal gratis: plan de entreno y de comidas personalizado según tu objetivo, entreno guiado para gimnasio o en casa sin material, 84 ejercicios con técnica, registro con un toque, récords, rachas y progreso. Entra con Google y empieza hoy.",
+    "DNI GYM es tu entrenador personal gratis: plan de entreno y de comidas personalizado según tu objetivo, entreno guiado para gimnasio o en casa sin material, 148 ejercicios con técnica, registro con un toque, récords, rachas y progreso. Entra con Google y empieza hoy.",
   keywords: [
     "entrenador personal gratis",
     "entrenador personal online",

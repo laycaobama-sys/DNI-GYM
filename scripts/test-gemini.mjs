@@ -5,7 +5,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 const key = process.env.GEMINI_API_KEY;
-const model = process.env.GEMINI_MODEL || "gemini-2.5-pro";
+const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 if (!key) {
   console.error("✘ Falta la variable de entorno GEMINI_API_KEY.");
   process.exit(1);

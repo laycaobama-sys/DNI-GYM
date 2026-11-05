@@ -24,8 +24,13 @@ database_id = "5ac6b3cc-f614-4c9c-8c92-2f0ab0bcff31"
 
 [vars]
 ADMIN_EMAILS = "ibraguimova19@gmail.com"
-GEMINI_MODEL = "gemini-2.5-pro"
+# Gemini 2.5 Flash: modelo del nivel gratuito de Google AI Studio
+GEMINI_MODEL = "gemini-2.5-flash"
 AI_DAILY_LIMIT = "30"
+# tope global diario de peticiones a Gemini para no salir del nivel gratuito
+AI_GLOBAL_DAILY_LIMIT = "200"
+# Google OAuth: ID de cliente (público). El secreto es el secret GOOGLE_CLIENT_SECRET.
+GOOGLE_CLIENT_ID = "121689708991-cqrppb3f29gim7ifhjedhlolep27rp16.apps.googleusercontent.com"
 # Cloudflare Turnstile (anti-bots): clave pública. La secreta es el secret TURNSTILE_SECRET.
 TURNSTILE_SITE_KEY = "0x4AAAAAAF1VDqincCZsX_z6"
 
