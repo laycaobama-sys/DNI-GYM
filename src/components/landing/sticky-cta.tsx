@@ -24,10 +24,10 @@ export function StickyCta() {
       )}
     >
       <Link
-        href={user ? "/panel" : "/login"}
+        href={user ? "/panel" : "/login?modo=registro"}
         className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent font-semibold text-accent-ink"
       >
-        {user ? "Ir a mi panel" : "Empezar gratis con Google"} <ArrowRight className="size-4" />
+        {user ? "Ir a mi panel" : "Crear cuenta gratis"} <ArrowRight className="size-4" />
       </Link>
     </div>
   );

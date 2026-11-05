@@ -20,6 +20,7 @@ import {
   Trash2,
   UserPlus,
   Users,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { AUTH_ERROR_MESSAGES } from "@/components/auth-provider";
@@ -27,7 +28,7 @@ import { Avatar } from "@/components/app-shell";
 import { BarsChart, HBarList, TrendChart } from "@/components/charts";
 import { Logo } from "@/components/logo";
 import { Badge, Button, Card, CardHeader, Modal, Spinner, Stat, Tabs, cn } from "@/components/ui";
-import { adminAudit, adminDeleteEvent, adminListEvents, adminListUsers, adminSetBlocked, adminSetRole, adminSystem, adminUserWorkouts, backendEnabled, type AdminSystem, type AuditEntry } from "@/lib/db";
+import { adminAudit, adminDeleteEvent, adminListEvents, adminListUsers, adminResetLink, adminSetBlocked, adminSetRole, adminSystem, adminUserWorkouts, backendEnabled, type AdminSystem, type AuditEntry } from "@/lib/db";
 import { AiChat } from "@/components/ai-chat";
 import { addDays, dayKey, fmtDate, fmtDateTime, fmtNumber, timeAgo } from "@/lib/fitness";
 import type { AppEvent, EventType, UserProfile, Workout } from "@/lib/types";
@@ -46,16 +47,17 @@ const EVENT_META: Record<EventType, { label: string; tone: "neutral" | "accent" 
 };
 
 const FIXES: Record<string, string> = {
-  "auth/popup-closed-by-user": "Normal: el usuario cerró la ventana de Google. Si se repite mucho con el mismo usuario, puede que el navegador esté bloqueando cookies de terceros.",
-  "auth/cancelled-popup-request": "Normal: se pulsó el botón varias veces. No requiere acción.",
-  "auth/popup-blocked": "El navegador bloqueó la ventana emergente. La app reintenta automáticamente con redirección. Recomienda al usuario permitir ventanas emergentes.",
-  "auth/unauthorized-domain": "ACCIÓN NECESARIA: añade tu dominio en Firebase Console → Authentication → Settings → Authorized domains.",
-  "auth/operation-not-allowed": "ACCIÓN NECESARIA: activa el proveedor Google en Firebase Console → Authentication → Sign-in method.",
-  "auth/network-request-failed": "Problema de red del usuario (wifi del gimnasio, VPN, bloqueador). Pídele que pruebe con datos móviles.",
-  "auth/too-many-requests": "Firebase limitó temporalmente los intentos. Se resuelve solo en unos minutos.",
-  "auth/web-storage-unsupported": "El usuario navega en modo privado o con almacenamiento bloqueado. Debe permitir cookies/almacenamiento para este sitio.",
-  "auth/internal-error": "Error temporal de Google/Firebase. Si persiste, revisa la configuración de la API key y el estado de Firebase.",
-  "profile/load-failed": "El usuario inició sesión pero no se pudo leer/crear su perfil. Revisa que las reglas de Firestore estén desplegadas (firebase deploy --only firestore:rules).",
+  "auth/wrong-credentials": "Normal si es puntual: el usuario se equivocó de contraseña. Si se repite mucho en la misma cuenta, puede ser un ataque: el sistema bloquea esa cuenta 15 minutos tras 8 intentos.",
+  "auth/no-password": "La cuenta se creó con Google y no tiene contraseña. Puede entrar con Google o puedes generarle un enlace de contraseña desde Usuarios.",
+  "reset/requested": "ACCIÓN: el usuario pidió cambiar su contraseña. Abre Usuarios → su ficha → «Enlace de contraseña» y envíaselo por un canal de confianza.",
+  "reset/unknown-email": "Alguien pidió recuperar un correo sin cuenta. No requiere acción.",
+  "account/blocked": "Una cuenta suspendida intentó entrar. Revisa si debe seguir bloqueada.",
+  "account-blocked": "Una cuenta suspendida intentó entrar con Google.",
+  "google-off": "El botón de Google no está configurado (faltan GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en Cloudflare).",
+  "google-cancelled": "Normal: el usuario canceló en la pantalla de Google.",
+  "google-state": "La sesión de Google caducó o se abrió en otra pestaña/navegador. Si se repite mucho, revisa que las cookies no estén bloqueadas.",
+  "google-token": "Google rechazó el intercambio del código. Revisa que el secreto de Google y la URL de redirección autorizada sean correctos.",
+  "google-verify": "No se pudo verificar el token de Google. Si se repite, revisa el ID de cliente configurado.",
 };
 
 export function AdminDashboard() {
@@ -68,7 +70,12 @@ export function AdminDashboard() {
   const [q, setQ] = useState("");
   const [userFilter, setUserFilter] = useState<"todos" | "activos" | "inactivos" | "bloqueados">("todos");
   const [eventFilter, setEventFilter] = useState<EventType | "todos">("todos");
-  const [detail, setDetail] = useState<UserProfile | null>(null);
+  const [detail, setDetailState] = useState<UserProfile | null>(null);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const setDetail = (u: UserProfile | null) => {
+    setDetailState(u);
+    setResetLink(null);
+  };
   const [detailWorkouts, setDetailWorkouts] = useState<Workout[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -177,7 +184,7 @@ export function AdminDashboard() {
   const toggleBlock = async (u: UserProfile) => {
     await adminSetBlocked(u.uid, !u.blocked);
     setUsers((list) => list.map((x) => (x.uid === u.uid ? { ...x, blocked: !u.blocked } : x)));
-    setDetail((d) => (d && d.uid === u.uid ? { ...d, blocked: !u.blocked } : d));
+    setDetailState((d) => (d && d.uid === u.uid ? { ...d, blocked: !u.blocked } : d));
   };
 
   return (
@@ -432,7 +439,9 @@ export function AdminDashboard() {
                   <dl className="divide-y divide-line px-5 pb-3 text-sm">
                     {[
                       ["Backend", system?.backend ?? (backendEnabled ? "Cloudflare Workers + D1" : "Modo demo (navegador)")],
-                      ["Acceso con Google", backendEnabled ? "Activo · sesión segura en Cloudflare" : "Simulado"],
+                      ["Cuentas con correo y contraseña", backendEnabled ? "Activo · PBKDF2 + sesión segura en Cloudflare" : "Simulado"],
+                      ["Acceso con Google", system?.auth ? (system.auth.google ? "Activo (OAuth directo)" : "Sin configurar (faltan GOOGLE_CLIENT_ID/SECRET)") : "—"],
+                      ["Anti-bots (Turnstile)", system?.auth ? (system.auth.turnstile ? "Activo" : "Sin configurar") : "—"],
                       ["IA (Gemini)", system ? (system.ai ? `Activa · ${system.model}` : "Sin configurar (falta GEMINI_API_KEY)") : "—"],
                       ["Consultas de IA (30 d)", system ? `${fmtNumber(system.aiRequests30d)} · ${fmtNumber(system.aiTokens30d)} tokens` : "—"],
                       ["Límite IA por usuario/día", system ? String(system.aiDailyLimit) : "—"],
@@ -517,11 +526,28 @@ export function AdminDashboard() {
                   <Shield className="size-4" /> {detail.role === "admin" ? "Quitar admin" : "Hacer administrador"}
                 </Button>
               )}
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  const r = await adminResetLink(detail.uid);
+                  setResetLink(r.url);
+                  navigator.clipboard?.writeText(r.url).catch(() => {});
+                }}
+              >
+                <KeyRound className="size-4" /> Enlace de contraseña
+              </Button>
               <Button variant={detail.blocked ? "secondary" : "danger"} onClick={() => toggleBlock(detail)}>
                 {detail.blocked ? <CheckCircle2 className="size-4" /> : <Ban className="size-4" />}
                 {detail.blocked ? "Desbloquear" : "Bloquear acceso"}
               </Button>
             </div>
+            {resetLink && (
+              <div className="rounded-xl border border-accent/30 bg-accent/[0.06] p-4 text-sm">
+                <p className="font-semibold text-ink">Enlace copiado · válido 72 horas y de un solo uso</p>
+                <p className="mt-1 text-ink-2">Envíaselo a {detail.email} por un canal de confianza. Al usarlo, su email queda verificado y se cierran sus otras sesiones.</p>
+                <code className="mt-2 block break-all rounded-lg bg-black/40 p-2 text-xs text-accent">{resetLink}</code>
+              </div>
+            )}
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 ["Alta", fmtDate(detail.createdAt)],
@@ -531,7 +557,8 @@ export function AdminDashboard() {
                 ["Objetivo", detail.goal ?? "—"],
                 ["Altura", detail.heightCm ? `${detail.heightCm} cm` : "—"],
                 ["Calorías", detail.calorieGoal ? `${detail.calorieGoal} kcal` : "—"],
-                ["Proveedor", detail.provider ?? "google.com"],
+                ["Acceso", [detail.hasPassword && "contraseña", detail.googleLinked && "Google"].filter(Boolean).join(" + ") || detail.provider || "—"],
+                ["Email", detail.emailVerified ? "verificado" : "sin verificar"],
               ].map(([k, v]) => (
                 <div key={k} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5">
                   <dt className="text-xs text-muted">{k}</dt>

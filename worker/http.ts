@@ -10,7 +10,7 @@ export class HttpError extends Error {
 export const json = (data: unknown, status = 200, headers: HeadersInit = {}) =>
   new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-robots-tag": "noindex", ...headers },
   });
 
 export async function readJson<T = Record<string, unknown>>(req: Request, maxBytes = 512_000): Promise<T> {

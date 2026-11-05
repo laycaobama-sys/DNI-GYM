@@ -29,6 +29,9 @@ export interface UserProfile {
   waterGoal?: number;
   demo?: boolean;
   role?: "admin" | "user";
+  emailVerified?: boolean;
+  hasPassword?: boolean;
+  googleLinked?: boolean;
   // ── personalización (cuestionario de bienvenida) ──
   level?: "principiante" | "intermedio" | "avanzado";
   place?: "gimnasio" | "casa";

@@ -8,13 +8,22 @@ import {
   clearCookie,
   createSession,
   currentUser,
+  googleEnabled,
+  hashPassword,
+  normalizeEmail,
+  passwordProblem,
+  pkceChallenge,
+  randomId,
+  randomToken,
   requireAdmin,
   requireUser,
   sessionCookie,
   sha256Hex,
+  tempCookie,
   toProfile,
   verifyGoogleIdToken,
-  type GoogleIdentity,
+  verifyPassword,
+  verifyTurnstile,
   type UserRow,
 } from "./auth";
 import { DEFAULT_MODEL, createGeminiService, type ChatTurn } from "./gemini";
@@ -41,35 +50,248 @@ async function logEvent(env: Env, e: { type: string; userId?: string | null; ema
 
 // ───────────────────────── autenticación ─────────────────────────
 
-async function loginWithIdentity(env: Env, req: Request, id: GoogleIdentity) {
-  const now = Date.now();
-  const admins = adminEmails(env);
-  const existing = await env.DB.prepare("SELECT * FROM users WHERE id = ? OR email = ?").bind(id.uid, id.email).first<UserRow>();
-  let isNew = false;
-  if (!existing) {
-    isNew = true;
-    await env.DB.prepare(
-      `INSERT INTO users (id, email, name, photo_url, provider, role, blocked, profile, created_at, last_login_at, last_active_at, login_count)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 1)`,
-    )
-      .bind(id.uid, id.email, id.name, id.picture, id.provider, admins.includes(id.email) ? "admin" : "user", JSON.stringify({ onboarded: false, weeklyWorkoutsGoal: 3 }), now, now, now)
-      .run();
-  } else {
-    await env.DB.prepare(
-      `UPDATE users SET name = COALESCE(name, ?), photo_url = ?, last_login_at = ?, last_active_at = ?, login_count = login_count + 1,
-       role = CASE WHEN ? THEN 'admin' ELSE role END WHERE id = ?`,
-    )
-      .bind(id.name, id.picture, now, now, admins.includes(id.email) ? 1 : 0, existing.id)
-      .run();
+const ipOf = (req: Request) => req.headers.get("cf-connecting-ip") || "local";
+const uaOf = (req: Request) => req.headers.get("user-agent")?.slice(0, 300) ?? null;
+const NEW_PROFILE = JSON.stringify({ onboarded: false, weeklyWorkoutsGoal: 3 });
+
+async function userBy(env: Env, col: "id" | "email" | "google_sub", v: string) {
+  return env.DB.prepare(`SELECT * FROM users WHERE ${col} = ?`).bind(v).first<UserRow>();
+}
+
+/** Admin solo si el email está en ADMIN_EMAILS y está verificado (Google o enlace de un solo uso). */
+async function syncAdminRole(env: Env, u: UserRow) {
+  if (u.email_verified && u.role !== "admin" && adminEmails(env).includes(u.email)) {
+    await env.DB.prepare("UPDATE users SET role = 'admin' WHERE id = ?").bind(u.id).run();
+    u.role = "admin";
   }
-  const user = (await env.DB.prepare("SELECT * FROM users WHERE id = ? OR email = ?").bind(id.uid, id.email).first<UserRow>())!;
-  if (user.blocked) {
-    await logEvent(env, { type: "auth_error", userId: user.id, email: user.email, code: "account/blocked", message: "Intento de acceso de una cuenta suspendida", path: "/login" });
+}
+
+/** Abre sesión para el usuario: comprueba bloqueo, registra el acceso y devuelve la cookie. */
+async function startSession(env: Env, req: Request, u: UserRow, isNew: boolean, via: string) {
+  if (u.blocked) {
+    await logEvent(env, { type: "auth_error", userId: u.id, email: u.email, code: "account/blocked", message: "Intento de acceso de una cuenta suspendida", path: "/login", ua: uaOf(req) });
     throw new HttpError(403, "Tu cuenta está suspendida. Escríbenos para revisarlo.");
   }
-  const token = await createSession(env, user.id, req.headers.get("user-agent"));
-  await logEvent(env, { type: isNew ? "signup" : "login", userId: user.id, email: user.email, name: user.name, path: "/login", ua: req.headers.get("user-agent")?.slice(0, 300) });
-  return json({ profile: toProfile(user), isAdmin: user.role === "admin", isNew }, 200, { "set-cookie": sessionCookie(token, req) });
+  await syncAdminRole(env, u);
+  const now = Date.now();
+  if (!isNew) await env.DB.prepare("UPDATE users SET last_login_at = ?, last_active_at = ?, login_count = login_count + 1 WHERE id = ?").bind(now, now, u.id).run();
+  const token = await createSession(env, u.id, uaOf(req));
+  await logEvent(env, { type: isNew ? "signup" : "login", userId: u.id, email: u.email, name: u.name, code: via, path: "/login", ua: uaOf(req) });
+  const fresh = (await userBy(env, "id", u.id))!;
+  return { token, profile: toProfile(fresh), isAdmin: fresh.role === "admin", isNew };
+}
+
+async function createUser(env: Env, d: { email: string; name: string; provider: string; passwordHash?: string | null; verified: boolean; googleSub?: string | null; picture?: string | null }) {
+  const now = Date.now();
+  const id = randomId();
+  await env.DB.prepare(
+    `INSERT INTO users (id, email, name, photo_url, provider, role, blocked, profile, created_at, last_login_at, last_active_at, login_count, password_hash, email_verified, google_sub)
+     VALUES (?, ?, ?, ?, ?, 'user', 0, ?, ?, ?, ?, 1, ?, ?, ?)`,
+  )
+    .bind(id, d.email, d.name, d.picture ?? null, d.provider, NEW_PROFILE, now, now, now, d.passwordHash ?? null, d.verified ? 1 : 0, d.googleSub ?? null)
+    .run();
+  return (await userBy(env, "id", id))!;
+}
+
+/** Crea un enlace de un solo uso para crear o cambiar la contraseña. */
+async function createResetLink(env: Env, origin: string, userId: string, hours: number, createdBy: string | null) {
+  const token = randomToken(32);
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM auth_tokens WHERE user_id = ? AND purpose = 'reset'").bind(userId),
+    env.DB.prepare("INSERT INTO auth_tokens (token_hash, user_id, purpose, created_at, expires_at, created_by) VALUES (?, ?, 'reset', ?, ?, ?)").bind(await sha256Hex(token), userId, now, now + hours * 3600_000, createdBy),
+  ]);
+  return { url: `${origin}/restablecer/?token=${token}`, expiresAt: now + hours * 3600_000 };
+}
+
+async function authRoutes(req: Request, env: Env, url: URL, path: string, m: string): Promise<Response | null> {
+  const ip = ipOf(req);
+  const withCookie = (r: { token: string; profile: unknown; isAdmin: boolean; isNew: boolean }) =>
+    json({ profile: r.profile, isAdmin: r.isAdmin, isNew: r.isNew }, 200, { "set-cookie": sessionCookie(r.token, req) });
+
+  // ── crear cuenta con correo y contraseña ──
+  if (path === "/api/auth/signup" && m === "POST") {
+    if (!(await rateLimit(env, `signup:${ip}`, 12, 3600))) throw new HttpError(429, "Demasiadas cuentas creadas desde esta conexión. Inténtalo más tarde.");
+    const b = await readJson<{ email?: string; password?: string; name?: string; turnstile?: string; acceptTerms?: boolean }>(req, 8_000);
+    await verifyTurnstile(env, b.turnstile, ip);
+    const email = normalizeEmail(b.email);
+    if (!email) throw new HttpError(400, "Escribe un correo electrónico válido.");
+    const name = String(b.name || "").trim().slice(0, 80);
+    if (name.length < 2) throw new HttpError(400, "Escribe tu nombre.");
+    const problem = passwordProblem(b.password, email);
+    if (problem) throw new HttpError(400, problem);
+    if (b.acceptTerms !== true) throw new HttpError(400, "Debes aceptar los términos y la política de privacidad.");
+    if (await userBy(env, "email", email)) throw new HttpError(409, "Ya existe una cuenta con este correo. Inicia sesión o recupera tu contraseña.");
+    const u = await createUser(env, { email, name, provider: "password", passwordHash: await hashPassword(b.password!), verified: false });
+    return withCookie(await startSession(env, req, u, true, "password"));
+  }
+
+  // ── iniciar sesión con correo y contraseña ──
+  if (path === "/api/auth/login" && m === "POST") {
+    if (!(await rateLimit(env, `login:${ip}`, 30, 600))) throw new HttpError(429, "Demasiados intentos. Espera unos minutos.");
+    const b = await readJson<{ email?: string; password?: string; turnstile?: string }>(req, 8_000);
+    await verifyTurnstile(env, b.turnstile, ip);
+    const email = normalizeEmail(b.email);
+    if (!email || typeof b.password !== "string" || !b.password) throw new HttpError(400, "Escribe tu correo y tu contraseña.");
+    if (!(await rateLimit(env, `pw:${email}`, 8, 900))) throw new HttpError(429, "Demasiados intentos para esta cuenta. Espera 15 minutos o recupera tu contraseña.");
+    const u = await userBy(env, "email", email);
+    const ok = await verifyPassword(b.password.slice(0, 200), u?.password_hash ?? null);
+    if (!u || !ok) {
+      await logEvent(env, { type: "auth_error", userId: u?.id, email, code: u && !u.password_hash ? "auth/no-password" : "auth/wrong-credentials", message: "Correo o contraseña incorrectos", path: "/login", ua: uaOf(req) });
+      if (u && !u.password_hash)
+        throw new HttpError(401, googleEnabled(env) ? "Esta cuenta se creó con Google. Entra con Google o crea una contraseña desde «¿Olvidaste tu contraseña?»." : "Esta cuenta todavía no tiene contraseña. Pulsa «¿Olvidaste tu contraseña?».");
+      throw new HttpError(401, "Correo o contraseña incorrectos.");
+    }
+    return withCookie(await startSession(env, req, u, false, "password"));
+  }
+
+  // ── olvidé mi contraseña ──
+  if (path === "/api/auth/forgot" && m === "POST") {
+    if (!(await rateLimit(env, `forgot:${ip}`, 5, 3600))) throw new HttpError(429, "Demasiadas solicitudes. Inténtalo más tarde.");
+    const b = await readJson<{ email?: string; turnstile?: string }>(req, 8_000);
+    await verifyTurnstile(env, b.turnstile, ip);
+    const email = normalizeEmail(b.email);
+    if (!email) throw new HttpError(400, "Escribe un correo electrónico válido.");
+    const u = await userBy(env, "email", email);
+    // Sin servicio de correo propio todavía: la solicitud queda en el panel de administración, que genera el enlace.
+    await logEvent(env, { type: "password_reset", userId: u?.id, email, code: u ? "reset/requested" : "reset/unknown-email", message: "Solicitud de cambio de contraseña", path: "/recuperar", ua: uaOf(req) });
+    return json({ ok: true });
+  }
+
+  // ── restablecer con enlace de un solo uso ──
+  if (path === "/api/auth/reset" && m === "POST") {
+    if (!(await rateLimit(env, `reset:${ip}`, 20, 3600))) throw new HttpError(429, "Demasiados intentos. Inténtalo más tarde.");
+    const b = await readJson<{ token?: string; password?: string }>(req, 8_000);
+    if (typeof b.token !== "string" || b.token.length < 20 || b.token.length > 100) throw new HttpError(400, "El enlace no es válido.");
+    const hash = await sha256Hex(b.token);
+    const t = await env.DB.prepare("SELECT * FROM auth_tokens WHERE token_hash = ? AND purpose = 'reset'").bind(hash).first<{ user_id: string; expires_at: number }>();
+    if (!t || t.expires_at < Date.now()) throw new HttpError(400, "El enlace ha caducado o ya se usó. Pide uno nuevo.");
+    const u = await userBy(env, "id", t.user_id);
+    if (!u) throw new HttpError(400, "El enlace no es válido.");
+    const problem = passwordProblem(b.password, u.email);
+    if (problem) throw new HttpError(400, problem);
+    // El enlace llega al dueño del correo: la contraseña cambia, el email queda verificado y se cierran las demás sesiones.
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET password_hash = ?, email_verified = 1 WHERE id = ?").bind(await hashPassword(b.password!), u.id),
+      env.DB.prepare("DELETE FROM auth_tokens WHERE user_id = ? AND purpose = 'reset'").bind(u.id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(u.id),
+    ]);
+    await logEvent(env, { type: "password_reset", userId: u.id, email: u.email, code: "reset/completed", message: "Contraseña cambiada con enlace", path: "/restablecer", ua: uaOf(req) });
+    u.email_verified = 1;
+    return withCookie(await startSession(env, req, u, false, "reset"));
+  }
+
+  // ── Google: inicio del flujo OAuth (código + PKCE + nonce + state) ──
+  if (path === "/api/auth/google" && m === "GET") {
+    if (!googleEnabled(env)) return Response.redirect(`${url.origin}/login/?error=google-off`, 302);
+    if (!(await rateLimit(env, `google:${ip}`, 30, 600))) return Response.redirect(`${url.origin}/login/?error=rate`, 302);
+    const state = randomToken(24);
+    const verifier = randomToken(48);
+    const nonce = randomToken(24);
+    const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    auth.search = new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID!,
+      redirect_uri: `${url.origin}/api/auth/google/callback`,
+      response_type: "code",
+      scope: "openid email profile",
+      state,
+      nonce,
+      code_challenge: await pkceChallenge(verifier),
+      code_challenge_method: "S256",
+      prompt: "select_account",
+    }).toString();
+    const h = new Headers({ location: auth.toString(), "cache-control": "no-store" });
+    h.append("set-cookie", tempCookie("g_oauth", `${state}.${verifier}.${nonce}`, req));
+    return new Response(null, { status: 302, headers: h });
+  }
+
+  // ── Google: vuelta desde Google ──
+  if (path === "/api/auth/google/callback" && m === "GET") {
+    const fail = (code: string, msg: string) =>
+      logEvent(env, { type: "auth_error", code, message: msg.slice(0, 300), path: "/login", ua: uaOf(req) }).then(() => {
+        const h = new Headers({ location: `${url.origin}/login/?error=${encodeURIComponent(code)}`, "cache-control": "no-store" });
+        h.append("set-cookie", tempCookie("g_oauth", "", req, 0));
+        return new Response(null, { status: 302, headers: h });
+      });
+    if (!googleEnabled(env)) return fail("google-off", "Google no está configurado");
+    const [state, verifier, nonce] = (getCookie(req, "g_oauth") || "").split(".");
+    if (url.searchParams.get("error")) return fail("google-cancelled", url.searchParams.get("error") || "cancelado");
+    if (!state || state !== url.searchParams.get("state")) return fail("google-state", "Estado OAuth no válido");
+    const code = url.searchParams.get("code");
+    if (!code) return fail("google-code", "Falta el código");
+    try {
+      const res = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID!, client_secret: env.GOOGLE_CLIENT_SECRET!, redirect_uri: `${url.origin}/api/auth/google/callback`, grant_type: "authorization_code", code_verifier: verifier }),
+      });
+      const tok = (await res.json()) as { id_token?: string; error?: string };
+      if (!res.ok || !tok.id_token) return fail("google-token", tok.error || `HTTP ${res.status}`);
+      const g = await verifyGoogleIdToken(tok.id_token, env.GOOGLE_CLIENT_ID!, nonce);
+      let u = await userBy(env, "google_sub", g.sub);
+      let isNew = false;
+      if (!u) {
+        const byEmail = await userBy(env, "email", g.email);
+        if (byEmail) {
+          // Vincular. Si la cuenta tenía contraseña sin verificar, se anula (evita que alguien registre antes el correo de otra persona).
+          const wipe = byEmail.password_hash && !byEmail.email_verified;
+          await env.DB.batch([
+            env.DB.prepare(`UPDATE users SET google_sub = ?, email_verified = 1, photo_url = COALESCE(photo_url, ?)${wipe ? ", password_hash = NULL" : ""} WHERE id = ?`).bind(g.sub, g.picture, byEmail.id),
+            ...(wipe ? [env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(byEmail.id)] : []),
+          ]);
+          u = (await userBy(env, "id", byEmail.id))!;
+        } else {
+          u = await createUser(env, { email: g.email, name: g.name, provider: "google", verified: true, googleSub: g.sub, picture: g.picture });
+          isNew = true;
+        }
+      }
+      const r = await startSession(env, req, u, isNew, "google");
+      const h = new Headers({ location: `${url.origin}${r.isNew || !JSON.parse(u.profile || "{}").onboarded ? "/bienvenida/" : "/panel/"}`, "cache-control": "no-store" });
+      h.append("set-cookie", sessionCookie(r.token, req));
+      h.append("set-cookie", tempCookie("g_oauth", "", req, 0));
+      return new Response(null, { status: 302, headers: h });
+    } catch (e) {
+      if (e instanceof HttpError && e.status === 403 && /suspendida/.test(e.message)) return fail("account-blocked", e.message);
+      return fail("google-verify", e instanceof Error ? e.message : "error");
+    }
+  }
+
+  // ── cambiar o crear contraseña (con sesión) ──
+  if (path === "/api/auth/password" && m === "POST") {
+    const u = await requireUser(env, req);
+    if (!(await rateLimit(env, `chpw:${u.id}`, 10, 3600))) throw new HttpError(429, "Demasiados intentos. Inténtalo más tarde.");
+    const b = await readJson<{ current?: string; password?: string }>(req, 8_000);
+    if (u.password_hash && !(await verifyPassword(String(b.current || "").slice(0, 200), u.password_hash))) throw new HttpError(400, "La contraseña actual no es correcta.");
+    const problem = passwordProblem(b.password, u.email);
+    if (problem) throw new HttpError(400, problem);
+    const token = await createSession(env, u.id, uaOf(req));
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(await hashPassword(b.password!), u.id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?").bind(u.id, await sha256Hex(token)),
+    ]);
+    await logEvent(env, { type: "password_reset", userId: u.id, email: u.email, code: "password/changed", message: "Contraseña cambiada desde el perfil", path: "/panel/perfil", ua: uaOf(req) });
+    return json({ ok: true }, 200, { "set-cookie": sessionCookie(token, req) });
+  }
+
+  // ── solo desarrollo local: DEV_AUTH=1 en .dev.vars (nunca en producción) ──
+  if (path === "/api/auth/dev" && m === "POST") {
+    if (env.DEV_AUTH !== "1") throw new HttpError(404, "No encontrado");
+    const b = await readJson<{ email?: string; name?: string }>(req);
+    const email = normalizeEmail(b.email || "dev@dnigym.local") ?? "dev@dnigym.local";
+    let u = await userBy(env, "email", email);
+    const isNew = !u;
+    u ??= await createUser(env, { email, name: b.name || "Usuario de pruebas", provider: "dev", verified: true });
+    return withCookie(await startSession(env, req, u, isNew, "dev"));
+  }
+
+  if (path === "/api/auth/logout" && m === "POST") {
+    const token = getCookie(req, SESSION_COOKIE);
+    const u = await currentUser(env, req);
+    if (token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
+    if (u) await logEvent(env, { type: "logout", userId: u.id, email: u.email });
+    return json({ ok: true }, 200, { "set-cookie": clearCookie(req) });
+  }
+  return null;
 }
 
 // ───────────────────────── IA ─────────────────────────
@@ -164,36 +386,18 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
   // ── públicas ──
   if (path === "/api/health") return json({ ok: true, time: Date.now() });
   if (path === "/api/config")
-    return json({ backend: "cloudflare", ai: Boolean(env.GEMINI_API_KEY), model: env.GEMINI_MODEL || DEFAULT_MODEL, devAuth: env.DEV_AUTH === "1" });
+    return json({
+      backend: "cloudflare",
+      ai: Boolean(env.GEMINI_API_KEY),
+      model: env.GEMINI_MODEL || DEFAULT_MODEL,
+      devAuth: env.DEV_AUTH === "1",
+      google: googleEnabled(env),
+      turnstileSiteKey: env.TURNSTILE_SECRET ? env.TURNSTILE_SITE_KEY || null : null,
+    });
 
-  if (path === "/api/auth/session" && m === "POST") {
-    const ip = req.headers.get("cf-connecting-ip") || "local";
-    if (!(await rateLimit(env, `login:${ip}`, 20, 600))) throw new HttpError(429, "Demasiados intentos. Espera unos minutos.");
-    const { idToken } = await readJson<{ idToken?: string }>(req, 10_000);
-    if (!idToken) throw new HttpError(400, "Falta el token de Google");
-    try {
-      const identity = await verifyGoogleIdToken(idToken, env.FIREBASE_PROJECT_ID);
-      return await loginWithIdentity(env, req, identity);
-    } catch (e) {
-      if (e instanceof HttpError && e.status !== 403) await logEvent(env, { type: "auth_error", code: "session/invalid-token", message: e.message, path: "/login", ua: req.headers.get("user-agent")?.slice(0, 300) });
-      throw e;
-    }
-  }
-
-  // Solo para desarrollo local: DEV_AUTH=1 en .dev.vars (nunca en producción).
-  if (path === "/api/auth/dev" && m === "POST") {
-    if (env.DEV_AUTH !== "1") throw new HttpError(404, "No encontrado");
-    const { email, name } = await readJson<{ email?: string; name?: string }>(req);
-    const e = String(email || "dev@dnigym.local").toLowerCase();
-    return loginWithIdentity(env, req, { uid: `dev-${(await sha256Hex(e)).slice(0, 20)}`, email: e, name: name || "Usuario de pruebas", picture: null, provider: "dev" });
-  }
-
-  if (path === "/api/auth/logout" && m === "POST") {
-    const token = getCookie(req, SESSION_COOKIE);
-    const u = await currentUser(env, req);
-    if (token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
-    if (u) await logEvent(env, { type: "logout", userId: u.id, email: u.email });
-    return json({ ok: true }, 200, { "set-cookie": clearCookie(req) });
+  if (seg[0] === "auth") {
+    const r = await authRoutes(req, env, url, path, m);
+    if (r) return r;
   }
 
   if (path === "/api/events" && m === "POST") {
@@ -308,7 +512,7 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
     }
   }
 
-  // importación única desde la base de datos anterior (Firestore): no sobrescribe nada existente
+  // importar una copia de seguridad (JSON exportado): no sobrescribe nada existente
   if (path === "/api/import" && m === "POST") {
     const b = await readJson<{ profile?: Record<string, unknown>; workouts?: Record<string, unknown>[]; body?: Record<string, unknown>[]; nutrition?: Record<string, unknown>[] }>(req, 5_000_000);
     const now = Date.now();
@@ -349,6 +553,7 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
       env.DB.prepare("DELETE FROM ai_messages WHERE user_id = ?").bind(user.id),
       env.DB.prepare("DELETE FROM ai_usage WHERE user_id = ?").bind(user.id),
       env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
+      env.DB.prepare("DELETE FROM auth_tokens WHERE user_id = ?").bind(user.id),
       env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
     ]);
     await logEvent(env, { type: "account_deleted", email: user.email });
@@ -443,6 +648,13 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
       const fresh = (await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(target.id).first<UserRow>())!;
       return json(toProfile(fresh));
     }
+    if (seg[1] === "users" && seg[2] && seg[3] === "reset-link" && m === "POST") {
+      const target = await userBy(env, "id", seg[2]);
+      if (!target) throw new HttpError(404, "Usuario no encontrado");
+      const link = await createResetLink(env, url.origin, target.id, 72, admin.id);
+      await audit(env, admin, "user.reset_link", target.email);
+      return json(link);
+    }
     if (path === "/api/admin/audit" && m === "GET") {
       const r = await env.DB.prepare("SELECT * FROM audit_log ORDER BY id DESC LIMIT 300").all();
       return json(r.results);
@@ -462,6 +674,7 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
         aiTokens30d: a.t,
         activeSessions: (sess.results[0] as { c: number }).c,
         adminEmails: adminEmails(env),
+        auth: { password: true, google: googleEnabled(env), turnstile: Boolean(env.TURNSTILE_SECRET), email: false },
       });
     }
     if (path === "/api/admin/ai" && m === "POST") {

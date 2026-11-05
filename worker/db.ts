@@ -1,7 +1,7 @@
 import type { Env } from "./env";
 
 /** Versión del esquema. Súbela y añade pasos en MIGRATIONS para evolucionarlo sin perder datos. */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const MIGRATIONS: Record<number, string[]> = {
   1: [
@@ -97,6 +97,23 @@ const MIGRATIONS: Record<number, string[]> = {
       target TEXT,
       detail TEXT
     )`,
+  ],
+  // v2: cuentas propias (correo + contraseña), Google OAuth directo y enlaces de un solo uso
+  2: [
+    `ALTER TABLE users ADD COLUMN password_hash TEXT`,
+    `ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN google_sub TEXT`,
+    `UPDATE users SET email_verified = 1 WHERE provider LIKE 'google%'`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL`,
+    `CREATE TABLE IF NOT EXISTS auth_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      purpose TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      created_by TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS auth_tokens_user ON auth_tokens(user_id)`,
   ],
 };
 

@@ -10,8 +10,8 @@ Fecha: 2026-11-03 · Rama: `main` (commit `030ab2a` antes de esta fase)
 | Estilos | Tailwind CSS 4 (tokens en `src/app/globals.css`) | Tema oscuro único |
 | Gráficas | Recharts 3 | `src/components/charts.tsx` |
 | Hosting | Cloudflare Workers (recursos estáticos) | `wrangler.toml`, despliegue con Workers Builds desde GitHub (`main`) |
-| Autenticación | Firebase Auth (Google) | proyecto `dni-gym-c6fa2` |
-| Base de datos | Firestore (cliente) | reglas en `firestore.rules` |
+| Autenticación | Propia en el Worker: correo + contraseña, Google OAuth, Turnstile | antes Firebase Auth (retirado en noviembre de 2026) |
+| Base de datos | Cloudflare D1 `dni-gym-db` | antes Firestore (retirado) |
 | IA | — | no existía |
 | Pagos | — | no existen (la app es gratuita) |
 | Tests | — | solo verificación manual con Playwright |
@@ -30,8 +30,8 @@ Leyenda: ✅ implementada y comprobada · 🟡 parcial · 🎨 visual sin lógic
 
 | Funcionalidad | Estado | Comentario |
 |---|---|---|
-| Login con Google | ✅ | Firebase Auth (popup + redirección de respaldo) |
-| Persistencia de datos de usuario | ✅ → migrando | Firestore; esta fase lo pasa a Cloudflare D1 |
+| Cuentas | ✅ | Correo + contraseña; Google al configurar el cliente OAuth |
+| Persistencia de datos de usuario | ✅ | Cloudflare D1 |
 | Cuestionario de bienvenida | ✅ | objetivo, sexo, edad, altura, peso, nivel, lugar, días, zonas, actividad, dieta, tiempo |
 | Dashboard | ✅ | entreno de hoy, semana, anillos, menú, retos, logros, gráficas |
 | Entreno guiado | ✅ | adaptación por tiempo/lugar/molestias, sustitución, 1RM, récords, diario |
@@ -57,9 +57,9 @@ Leyenda: ✅ implementada y comprobada · 🟡 parcial · 🎨 visual sin lógic
 
 | # | Severidad | Problema | Acción |
 |---|---|---|---|
-| 1 | Alta | El usuario quiere todos los datos y sesiones en Cloudflare; hoy están en Firestore | Worker + D1 + sesiones propias (esta fase) |
+| 1 | Alta | ✅ Resuelto: datos, cuentas y sesiones 100 % en Cloudflare | Worker + D1 + auth propia |
 | 2 | Alta | Clave de Gemini compartida en un chat | Guardarla solo como secreto del Worker; recomendar rotarla |
-| 3 | Media | `npm audit`: 4 avisos altos en `@grpc/grpc-js` (dependencia de Firestore para Node) | No afecta al navegador; desaparece al retirar Firestore tras la migración |
+| 3 | Media | ✅ Resuelto: `npm audit` sin vulnerabilidades al retirar Firebase | — |
 | 4 | Media | iOS: `env(safe-area-inset-*)` vale 0 sin `viewport-fit=cover` → la barra inferior podía quedar tapada | Añadir `viewportFit: "cover"` |
 | 5 | Media | Sin tests automáticos | Script de pruebas de API contra `wrangler dev` + Playwright |
 | 6 | Baja | Identidad en verde lima; el documento de marca pide naranja solar | Cambio de tokens (FASE 1) |
@@ -67,7 +67,8 @@ Leyenda: ✅ implementada y comprobada · 🟡 parcial · 🎨 visual sin lógic
 
 ## 5. Seguridad
 
-- No hay secretos en el repositorio: la configuración web de Firebase es pública por diseño.
-- Reglas de Firestore restringen cada usuario a sus datos; admin por lista de emails.
+- No hay secretos en el repositorio: todos son secrets del Worker.
+- Cada consulta de la API filtra por el usuario de la sesión; el rol admin lo decide el servidor.
+- CSP estricta, HSTS, cookies HttpOnly/Secure/SameSite, comprobación de origen (CSRF), límites de uso y auditoría.
 - Cabeceras de seguridad en `public/_headers` (HSTS, nosniff, frame, referrer, permissions).
 - Faltaban: validación backend propia, limitación de solicitudes y registro de auditoría → se añaden en el Worker.

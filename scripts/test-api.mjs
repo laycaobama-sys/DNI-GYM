@@ -9,12 +9,16 @@ const ok = (cond, name, extra = "") => {
   console.log(`${cond ? "✔" : "✘"} ${name}${cond ? "" : ` ${extra}`}`);
 };
 
+// IP simulada distinta en cada ejecución (en producción Cloudflare fija cf-connecting-ip y no se puede falsificar)
+const IP = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+
 function client() {
   let cookie = "";
-  return async (path, { method = "GET", body, origin } = {}) => {
+  return async (path, { method = "GET", body, origin, redirect = "follow" } = {}) => {
     const res = await fetch(BASE + path, {
       method,
-      headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}) },
+      redirect,
+      headers: { "content-type": "application/json", "cf-connecting-ip": IP, ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const set = res.headers.get("set-cookie");
@@ -26,7 +30,7 @@ function client() {
     } catch {
       data = text;
     }
-    return { status: res.status, data, cookie: set };
+    return { status: res.status, data, cookie: set, location: res.headers.get("location") };
   };
 }
 
@@ -40,8 +44,12 @@ const b = client();
 ok((await anon("/api/health")).status === 200, "health responde");
 ok((await anon("/api/me")).data.profile === null, "sin sesión /api/me devuelve null");
 ok((await anon("/api/workouts")).status === 401, "sin sesión no se pueden leer entrenos");
-ok((await anon("/api/auth/session", { method: "POST", body: { idToken: "x.y.z" } })).status === 401, "token de Google falso rechazado");
-ok((await anon("/api/auth/session", { method: "POST", body: { idToken: "x.y.z" }, origin: "https://malicioso.example" })).status === 403, "origen externo bloqueado (CSRF)");
+ok((await anon("/api/auth/login", { method: "POST", body: { email: "x@y.dev", password: "x" }, origin: "https://malicioso.example" })).status === 403, "origen externo bloqueado (CSRF)");
+const cfg = (await anon("/api/config")).data;
+ok(cfg.backend === "cloudflare" && typeof cfg.google === "boolean" && "turnstileSiteKey" in cfg, "configuración pública de acceso");
+const g = await anon("/api/auth/google", { redirect: "manual" });
+ok(g.status === 302 && /\/login\/\?error=google-off|accounts\.google\.com/.test(g.location || ""), "Google: redirige al flujo OAuth o avisa si no está configurado");
+ok((await anon("/api/auth/google/callback?state=a&code=b", { redirect: "manual" })).location?.includes("/login/?error="), "Google: vuelta sin estado válido rechazada");
 ok((await anon("/api/events", { method: "POST", body: { type: "visit", path: "/" } })).status === 200, "evento de visita anónimo aceptado");
 ok((await anon("/api/events", { method: "POST", body: { type: "login" } })).status === 400, "no se pueden falsificar eventos de login");
 
@@ -55,6 +63,33 @@ const ladm = await admin("/api/auth/dev", { method: "POST", body: { email: "ibra
 ok(ladm.data.isAdmin === true, "el email de ADMIN_EMAILS obtiene rol admin");
 const relog = await a("/api/auth/dev", { method: "POST", body: { email: `ana.${uniq}@test.dev` } });
 ok(relog.data.isNew === false && relog.data.profile.loginCount === 2, "segundo inicio de sesión cuenta como login");
+
+// ── cuentas con correo y contraseña ──
+const p1 = client();
+const p2 = client();
+const pwEmail = `pablo.${uniq}@test.dev`;
+const signup = (c, body) => c("/api/auth/signup", { method: "POST", body: { name: "Pablo", email: pwEmail, password: "Fuerza2026gym", acceptTerms: true, ...body } });
+ok((await signup(anon, { password: "123" })).status === 400, "registro: contraseña corta rechazada");
+ok((await signup(anon, { password: "abcdefghijkl" })).status === 400, "registro: contraseña sin números rechazada");
+ok((await signup(anon, { password: "1234567890" })).status === 400, "registro: contraseña común rechazada");
+ok((await signup(anon, { email: "no-es-un-correo" })).status === 400, "registro: email no válido rechazado");
+ok((await signup(anon, { acceptTerms: false })).status === 400, "registro: hay que aceptar los términos");
+const su = await signup(p1, {});
+ok(su.status === 200 && su.data.isNew === true && su.data.profile.hasPassword === true && su.data.profile.emailVerified === false, "registro con correo y contraseña");
+ok(/HttpOnly/i.test(su.cookie || ""), "el registro abre sesión con cookie segura");
+ok(!JSON.stringify((await p1("/api/me")).data).includes("pbkdf2"), "el hash de la contraseña nunca sale del servidor");
+ok((await signup(anon, {})).status === 409, "no se puede registrar dos veces el mismo correo");
+ok((await signup(anon, { email: "IBRAGUIMOVA19@gmail.com" })).status === 409, "nadie puede registrarse con el correo del dueño");
+ok((await p2("/api/auth/login", { method: "POST", body: { email: pwEmail, password: "otra-cosa-1" } })).status === 401, "login con contraseña incorrecta rechazado");
+const li = await p2("/api/auth/login", { method: "POST", body: { email: pwEmail.toUpperCase(), password: "Fuerza2026gym" } });
+ok(li.status === 200 && li.data.isNew === false && li.data.profile.loginCount === 2, "login con correo y contraseña (sin distinguir mayúsculas)");
+const victim = `victima.${uniq}@test.dev`;
+await anon("/api/auth/signup", { method: "POST", body: { name: "V", email: victim, password: "Segura2026xyz", acceptTerms: true } });
+let locked = 0;
+for (let i = 0; i < 10; i++) if ((await anon("/api/auth/login", { method: "POST", body: { email: victim, password: `mala-${i}-xx` } })).status === 429) locked++;
+ok(locked >= 1, "bloqueo temporal tras muchos intentos fallidos (fuerza bruta)");
+ok((await anon("/api/auth/forgot", { method: "POST", body: { email: "nadie@nada.dev" } })).data.ok === true, "recuperar contraseña no revela si el correo existe");
+ok((await anon("/api/auth/reset", { method: "POST", body: { token: "x".repeat(40), password: "Nueva2026gymx" } })).status === 400, "enlace de restablecer falso rechazado");
 
 // ── perfil ──
 const pp = await a("/api/profile", { method: "PATCH", body: { goal: "ganar", heightCm: 170, role: "admin", blocked: true, onboarded: true, name: "Ana G" } });
@@ -112,6 +147,24 @@ ok((await admin("/api/admin/audit")).data.some((x) => x.action === "user.block")
 // ── exportar, cerrar sesión y borrar ──
 const exp = await a("/api/export");
 ok(exp.data.workouts.length === 2 && exp.data.body.length === 2, "exportar mis datos");
+// ── enlace de contraseña (admin) y restablecer ──
+const pid = (await p2("/api/me")).data.profile.uid;
+ok((await a(`/api/admin/users/${pid}/reset-link`, { method: "POST" })).status === 403, "un usuario normal no puede crear enlaces de contraseña");
+const link = await admin(`/api/admin/users/${pid}/reset-link`, { method: "POST" });
+ok(link.status === 200 && /\/restablecer\/\?token=/.test(link.data.url), "el admin crea un enlace de un solo uso");
+const tok = new URL(link.data.url).searchParams.get("token");
+const p3 = client();
+ok((await p3("/api/auth/reset", { method: "POST", body: { token: tok, password: "corta" } })).status === 400, "restablecer exige contraseña segura");
+const rs = await p3("/api/auth/reset", { method: "POST", body: { token: tok, password: "Renovada2026gym" } });
+ok(rs.status === 200 && rs.data.profile.emailVerified === true, "restablecer cambia la contraseña y verifica el email");
+ok((await p3("/api/auth/reset", { method: "POST", body: { token: tok, password: "Otra2026gymxx" } })).status === 400, "el enlace no se puede reutilizar");
+ok((await p2("/api/me")).data.profile === null, "al restablecer se cierran las demás sesiones");
+ok((await anon("/api/auth/login", { method: "POST", body: { email: pwEmail, password: "Fuerza2026gym" } })).status === 401, "la contraseña antigua ya no sirve");
+ok((await p3("/api/auth/password", { method: "POST", body: { current: "mal", password: "Cambio2026gymx" } })).status === 400, "cambiar contraseña exige la actual");
+ok((await p3("/api/auth/password", { method: "POST", body: { current: "Renovada2026gym", password: "Cambio2026gymx" } })).status === 200, "cambiar contraseña desde el perfil");
+ok((await p3("/api/me")).data.profile?.email === pwEmail, "la sesión actual sigue activa tras cambiarla");
+ok((await anon("/api/auth/login", { method: "POST", body: { email: pwEmail, password: "Cambio2026gymx" } })).status === 200, "login con la contraseña nueva");
+
 ok((await a("/api/auth/logout", { method: "POST" })).status === 200, "cerrar sesión");
 ok((await a("/api/workouts")).status === 401, "tras cerrar sesión no hay acceso");
 await a("/api/auth/dev", { method: "POST", body: { email: `ana.${uniq}@test.dev` } });

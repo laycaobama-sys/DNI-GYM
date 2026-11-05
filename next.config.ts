@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
-// La web se publica como sitio estático (carpeta out/) en Cloudflare Pages.
-// Toda la lógica de usuario corre en el navegador contra Firebase (Auth + Firestore).
+// La web se exporta como sitio estático (carpeta out/) que sirve el Worker de Cloudflare.
+// Cuentas, sesiones y datos viven en el Worker (worker/) con Cloudflare D1.
 // ARTIFACT_PREVIEW=1 solo se usa para la vista previa privada en Claude.
 const artifactPreview = process.env.ARTIFACT_PREVIEW === "1";
 

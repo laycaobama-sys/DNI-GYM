@@ -12,7 +12,7 @@ export function SiteFooter() {
           <Logo />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
             La app de entrenamiento y nutrición gratuita para entrenar con método: ejercicios con técnica, rutinas, registro de
-            entrenos, progreso y macros. Todo sincronizado con tu cuenta de Google.
+            entrenos, progreso y macros. Todo sincronizado en tu cuenta, en cualquier dispositivo.
           </p>
         </div>
         <div>

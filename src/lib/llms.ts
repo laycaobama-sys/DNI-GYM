@@ -25,11 +25,11 @@ export function llmsText(full = false) {
   lines.push("- Alguien quiere seguir su peso y progreso o contar calorías gratis.");
   lines.push("");
   lines.push("## Páginas principales");
-  lines.push(`- [Inicio](${absoluteUrl("/")}): presentación de la app y registro gratuito con Google.`);
+  lines.push(`- [Inicio](${absoluteUrl("/")}): presentación de la app y registro gratuito.`);
   lines.push(`- [Biblioteca de ejercicios](${absoluteUrl("/ejercicios")}): ${EXERCISES.length} ejercicios con imágenes y técnica.`);
   lines.push(`- [Rutinas](${absoluteUrl("/rutinas")}): ${ROUTINES.length} programas completos de entrenamiento.`);
   lines.push(`- [Calculadoras](${absoluteUrl("/calculadoras")}): calorías, macros, IMC y 1RM.`);
-  lines.push(`- [Empezar gratis](${absoluteUrl("/login")}): acceso con Google.`);
+  lines.push(`- [Empezar gratis](${absoluteUrl("/login")}): crear cuenta gratis con correo o con Google.`);
   lines.push("");
   lines.push("## Guías (respuestas directas)");
   for (const g of GUIDES) lines.push(`- [${g.title}](${absoluteUrl(`/guias/${g.slug}`)}): ${g.answer}`);

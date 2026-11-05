@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { LoginCard } from "./login-card";
 
 export const metadata: Metadata = {
-  title: "Iniciar sesión",
-  description: "Accede gratis a DNI GYM con tu cuenta de Google y guarda tus entrenamientos, progreso y nutrición en la nube.",
+  title: "Iniciar sesión o crear cuenta",
+  description: "Crea gratis tu cuenta de DNI GYM con tu correo o con Google y guarda tus entrenamientos, progreso y nutrición en la nube.",
   alternates: { canonical: "/login" },
 };
 
 export default function LoginPage() {
-  return <LoginCard />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-bg" />}>
+      <LoginCard />
+    </Suspense>
+  );
 }

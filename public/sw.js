@@ -1,8 +1,8 @@
 /* DNI GYM · service worker: modo sin conexión.
    - Páginas: red primero (siempre la versión más reciente) y, sin cobertura, la última guardada.
    - Recursos estáticos e imágenes: caché primero y actualización en segundo plano.
-   Los datos del usuario los gestiona Firestore con su propia caché sin conexión. */
-const VERSION = "dnigym-v2";
+   La API (/api/*) nunca se guarda en caché: los datos del usuario siempre vienen de Cloudflare. */
+const VERSION = "dnigym-v3";
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
 const PRECACHE = ["/", "/panel/", "/login/", "/logo.svg", "/icon-192.png"];

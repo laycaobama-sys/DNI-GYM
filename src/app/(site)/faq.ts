@@ -5,7 +5,7 @@ export const HOME_FAQ = [
   },
   {
     q: "¿Se pierden mis datos si cierro sesión o cambio de móvil?",
-    a: "No. Tus entrenos, tu peso, tu nutrición y tu progreso se guardan en la nube asociados a tu cuenta de Google. Cierra sesión cuando quieras: al volver a entrar, desde cualquier dispositivo, todo seguirá ahí.",
+    a: "No. Tus entrenos, tu peso, tu nutrición y tu progreso se guardan en la nube asociados a tu cuenta. Cierra sesión cuando quieras: al volver a entrar, desde cualquier dispositivo, todo seguirá ahí.",
   },
   {
     q: "¿Funciona sin conexión en el gimnasio?",
@@ -21,7 +21,7 @@ export const HOME_FAQ = [
   },
   {
     q: "¿Cómo inicio sesión?",
-    a: "Pulsa «Empezar gratis» y elige tu cuenta de Google. Tu perfil se crea automáticamente y todos tus datos quedan guardados en la nube asociados a tu cuenta.",
+    a: "Pulsa «Empezar gratis» y crea tu cuenta con tu correo y una contraseña (o con Google, si lo prefieres). Tu perfil se crea al instante y todos tus datos quedan guardados en la nube asociados a tu cuenta.",
   },
   {
     q: "¿Sirve para principiantes?",

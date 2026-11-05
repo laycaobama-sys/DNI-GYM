@@ -1,4 +1,9 @@
 # Copia este archivo como .dev.vars para desarrollo local (wrangler dev). Nunca lo subas a Git.
 GEMINI_API_KEY=
-# Solo local: permite entrar sin Google en /api/auth/dev para pruebas automáticas.
+# Solo local: permite /api/auth/dev para pruebas automáticas (nunca en producción).
 DEV_AUTH=1
+# Turnstile en local: déjalo vacío para desactivarlo, o usa las claves de prueba oficiales de Cloudflare.
+TURNSTILE_SECRET=
+# Google OAuth (opcional en local)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

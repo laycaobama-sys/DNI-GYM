@@ -1,11 +1,14 @@
 # DNI GYM · Cloudflare Workers
 # - Web estática (out/, generada por `npm run build`) + API en /api/* (worker/index.ts)
-# - Base de datos D1: se crea automáticamente en el primer `wrangler deploy` (sin database_id).
-# - Secretos (NO van aquí): GEMINI_API_KEY → Worker › Settings › Variables and Secrets.
+# - Base de datos D1 `dni-gym-db` (Europa occidental). El esquema se crea/migra solo (worker/db.ts).
+# - Cuentas propias: correo + contraseña (PBKDF2) y Google OAuth directo, sesiones en D1.
+# - Secretos (NUNCA aquí): GEMINI_API_KEY, TURNSTILE_SECRET, GOOGLE_CLIENT_SECRET → `wrangler secret put NOMBRE`.
 name = "dni-gym"
 main = "worker/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
+# conserva variables añadidas desde el panel de Cloudflare (p. ej. GOOGLE_CLIENT_ID) al desplegar
+keep_vars = true
 
 [assets]
 directory = "./out"
@@ -20,10 +23,11 @@ database_name = "dni-gym-db"
 database_id = "5ac6b3cc-f614-4c9c-8c92-2f0ab0bcff31"
 
 [vars]
-FIREBASE_PROJECT_ID = "dni-gym-c6fa2"
 ADMIN_EMAILS = "ibraguimova19@gmail.com"
 GEMINI_MODEL = "gemini-2.5-pro"
 AI_DAILY_LIMIT = "30"
+# Cloudflare Turnstile (anti-bots): clave pública. La secreta es el secret TURNSTILE_SECRET.
+TURNSTILE_SITE_KEY = "0x4AAAAAAF1VDqincCZsX_z6"
 
 [observability]
 enabled = true

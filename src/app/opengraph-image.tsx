@@ -38,7 +38,7 @@ export default async function OgImage() {
           <div style={{ marginTop: 28, fontSize: 32, color: "#b4bac3" }}>Plan de entreno y de comidas · Entreno guiado · Progreso</div>
         </div>
         <div style={{ display: "flex", gap: 16 }}>
-          {["100% gratis", "Acceso con Google", "Móvil y ordenador"].map((t) => (
+          {["100% gratis", "Cuenta gratis", "Móvil y ordenador"].map((t) => (
             <div key={t} style={{ display: "flex", padding: "12px 24px", borderRadius: 999, border: "2px solid rgba(198,255,61,0.4)", color: "#ff6b1a", fontSize: 26, fontWeight: 600 }}>
               {t}
             </div>

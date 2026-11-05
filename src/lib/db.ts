@@ -322,6 +322,12 @@ export async function adminSetRole(uid: string, role: "admin" | "user") {
   await api(`/api/admin/users/${encodeURIComponent(uid)}`, { method: "PATCH", body: { role } });
 }
 
+/** Crea un enlace de un solo uso (72 h) para que el usuario cree o cambie su contraseña. */
+export async function adminResetLink(uid: string) {
+  if (!backendEnabled) return { url: `${location.origin}/restablecer/?token=demo`, expiresAt: Date.now() + 72 * 3600_000 };
+  return api<{ url: string; expiresAt: number }>(`/api/admin/users/${encodeURIComponent(uid)}/reset-link`, { method: "POST" });
+}
+
 export async function adminDeleteEvent(id: string) {
   if (!backendEnabled) {
     const db = readLocal();
@@ -341,6 +347,7 @@ export interface AdminSystem {
   aiTokens30d: number;
   activeSessions: number;
   adminEmails: string[];
+  auth?: { password: boolean; google: boolean; turnstile: boolean; email: boolean };
 }
 
 export async function adminSystem(): Promise<AdminSystem | null> {

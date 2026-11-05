@@ -2,7 +2,7 @@
 
 Aplicación web profesional de entrenamiento: acceso con Google, registro de entrenamientos, progreso, peso y medidas, nutrición con macros, biblioteca de 84 ejercicios con demostración visual, rutinas, calculadoras y **panel de administración**. Optimizada para SEO y para recomendaciones de asistentes de IA (ChatGPT, Gemini, Perplexity, Claude…).
 
-**Stack:** Next.js 16 (App Router, exportación estática) · Cloudflare Workers (recursos estáticos + API) · **Cloudflare D1** (base de datos) · Google Gemini (`@google/genai`) · React 19 · Tailwind CSS 4 · Recharts. Firebase se usa **solo** para mostrar la ventana de «Continuar con Google»; los datos, las sesiones y los permisos viven en Cloudflare.
+**Stack:** Next.js 16 (App Router, exportación estática) · Cloudflare Workers (recursos estáticos + API) · **Cloudflare D1** (base de datos) · Google Gemini (`@google/genai`) · React 19 · Tailwind CSS 4 · Recharts. Todo vive en Cloudflare: cuentas, contraseñas, sesiones, datos y permisos. No hay Firebase.
 
 Documentación de producto: [`docs/PROJECT_AUDIT.md`](docs/PROJECT_AUDIT.md), [`docs/PRODUCT_ARCHITECTURE.md`](docs/PRODUCT_ARCHITECTURE.md), [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md), [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md).
 
@@ -12,7 +12,12 @@ Documentación de producto: [`docs/PROJECT_AUDIT.md`](docs/PROJECT_AUDIT.md), [`
 
 Navegador → Worker `dni-gym` (`worker/index.ts`) → `/api/*` (sesión propia en cookie HttpOnly, validación, límites de uso, auditoría) → D1 `dni-gym-db`. Todo lo demás se sirve desde `out/` (estático).
 
-Acceso con Google: el navegador obtiene un ID token de Google (Firebase Auth) → `POST /api/auth/session` → el Worker verifica la firma RS256, emisor, audiencia y caducidad del token → crea una sesión aleatoria (solo se guarda su hash SHA-256 en D1) → cookie `dni_session` (HttpOnly, Secure, SameSite=Lax, 180 días). El rol de administrador lo decide el servidor (`ADMIN_EMAILS` y la columna `role`), nunca el navegador.
+**Cuentas:**
+- **Correo + contraseña:** `POST /api/auth/signup` y `/api/auth/login`. Contraseñas con PBKDF2-SHA256 (100 000 iteraciones, sal aleatoria), reglas de contraseña segura, límite de intentos por IP y por cuenta (bloqueo de 15 min) y Cloudflare Turnstile contra bots.
+- **Google:** OAuth 2.0 + OpenID Connect directo desde el Worker (código + PKCE + `state` + `nonce`, firma RS256 verificada). Se activa al configurar `GOOGLE_CLIENT_ID` y el secreto `GOOGLE_CLIENT_SECRET`. Si el correo ya existía, se vincula; si esa cuenta tenía una contraseña sin verificar, se anula (evita el secuestro de cuentas pre-registradas).
+- **Recuperar contraseña:** enlaces de un solo uso (hash SHA-256 en D1, 72 h). Mientras no haya un dominio con correo propio, el usuario lo pide en `/login` y el administrador genera el enlace desde **Admin → Usuarios → Enlace de contraseña**.
+- **Sesión:** token aleatorio de 256 bits (solo su hash en D1) en cookie `dni_session` HttpOnly, Secure, SameSite=Lax. Cambiar o restablecer la contraseña cierra las demás sesiones.
+- **Admin:** solo si el correo está en `ADMIN_EMAILS` **y** está verificado (Google o enlace), o si otro admin lo asigna.
 
 ## 2. Publicar en Cloudflare
 
@@ -21,9 +26,9 @@ Ya está conectado: cada push a `main` se construye y publica solo (Workers Buil
 - **Build command:** `npm run build` · **Deploy command:** `npx wrangler deploy`.
 - **D1:** `wrangler.toml` declara el binding `DB` sin `database_id`; en el primer despliegue Wrangler crea la base `dni-gym-db` automáticamente. Las tablas se crean/migran solas (`worker/db.ts`).
 - **IA (Gemini):** Worker `dni-gym` → **Settings → Variables and Secrets → Add → Type: Secret** → nombre `GEMINI_API_KEY`. Sin esta clave la app funciona igual y el Coach muestra un aviso. La clave nunca va en el código ni en el navegador.
-- **Variables** (en `wrangler.toml`): `FIREBASE_PROJECT_ID`, `ADMIN_EMAILS`, `GEMINI_MODEL` (por defecto `gemini-2.5-pro`), `AI_DAILY_LIMIT` (consultas de IA por usuario y día; admins ×4).
-- **Firebase** (solo identidad): Authentication → Google habilitado y, en **Authorized domains**, el dominio `*.workers.dev` del Worker y tu dominio propio.
-- Los usuarios que ya tenían datos en Firestore se migran a D1 automáticamente la primera vez que entran (sin borrar nada).
+- **Variables** (en `wrangler.toml`): `ADMIN_EMAILS`, `TURNSTILE_SITE_KEY`, `GEMINI_MODEL` (por defecto `gemini-2.5-pro`), `AI_DAILY_LIMIT` (consultas de IA por usuario y día; admins ×4).
+- **Secretos** (`npx wrangler secret put NOMBRE`): `GEMINI_API_KEY`, `TURNSTILE_SECRET`, `GOOGLE_CLIENT_SECRET`.
+- **Google (opcional):** en Google Cloud Console → APIs y servicios → Credenciales → *ID de cliente de OAuth* (aplicación web) con la URI de redirección `https://dni-gym.ibraguimova19.workers.dev/api/auth/google/callback`. Pon el ID como variable `GOOGLE_CLIENT_ID` y el secreto como `GOOGLE_CLIENT_SECRET`.
 
 ## 3. Desarrollo local
 
@@ -32,7 +37,7 @@ npm install
 cp .dev.vars.example .dev.vars   # DEV_AUTH=1 habilita «Entrar sin Google» SOLO en local
 npm run build                    # genera out/
 npm run dev:worker               # Worker + D1 local en http://127.0.0.1:8787
-npm run test:api                 # 49 pruebas de la API (con el Worker arrancado)
+npm run test:api                 # 77 pruebas de la API (con el Worker arrancado)
 npm run test:gemini              # comprueba la clave de Gemini sin coste (lista modelos)
 ```
 

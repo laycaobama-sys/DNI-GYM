@@ -39,7 +39,7 @@ export function SiteHeader() {
           Iniciar sesión
         </Link>
       </span>
-      <Link href="/login" className={buttonClass("primary", "sm")}>
+      <Link href="/login?modo=registro" className={buttonClass("primary", "sm")}>
         <span className="hidden min-[420px]:inline">Empezar gratis</span>
         <span className="min-[420px]:hidden">Empezar</span>
       </Link>

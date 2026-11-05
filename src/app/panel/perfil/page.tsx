@@ -11,6 +11,7 @@ import { ACTIVITY_FACTORS, GOAL_LABELS, computeNutritionGoals, fmtDate, fmtNumbe
 import { exportUserData, resetDemoData } from "@/lib/db";
 import { DIET_LABELS } from "@/lib/meals";
 import { Reminders } from "@/components/reminders";
+import { SecurityCard } from "@/components/security-card";
 import type { Activity, Goal, Sex, UserProfile } from "@/lib/types";
 
 export default function ProfilePage() {
@@ -228,8 +229,10 @@ export default function ProfilePage() {
 
       <Reminders />
 
+      <SecurityCard />
+
       <Card>
-        <CardHeader title="Tus datos" subtitle="Se guardan para siempre en tu cuenta de Google: aunque cierres sesión o cambies de móvil, todo sigue aquí." />
+        <CardHeader title="Tus datos" subtitle="Se guardan para siempre en tu cuenta de DNI GYM (Cloudflare): aunque cierres sesión o cambies de móvil, todo sigue aquí." />
         <div className="flex flex-col gap-3 p-5 sm:flex-row">
           <Button variant="secondary" onClick={download}>
             <Download className="size-4" /> Exportar mis datos (JSON)

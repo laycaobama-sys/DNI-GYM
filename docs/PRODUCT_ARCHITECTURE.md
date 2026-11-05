@@ -2,7 +2,7 @@
 
 ```
 Navegador (Next.js estático)
-   │  Google Sign-In (Firebase Auth solo como proveedor de identidad de Google)
+   │  Cuentas propias: correo + contraseña (PBKDF2) y Google OAuth directo (sin Firebase)
    │  POST /api/auth/session { idToken }
    ▼
 Cloudflare Worker  (worker/index.ts)
