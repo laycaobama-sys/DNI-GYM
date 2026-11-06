@@ -39,8 +39,8 @@ EMAIL_FROM = "DNI GYM <hola@dnigym.com>"
 EMAIL_USERS = "0"
 # hosts con la URL de retorno de Google registrada en Google Cloud (añade dnigym.com cuando la registres)
 GOOGLE_HOSTS = "dnigym.com,dni-gym.ibraguimova19.workers.dev"
-# Gemini 2.5 Flash: modelo del nivel gratuito de Google AI Studio
-GEMINI_MODEL = "gemini-2.5-flash"
+# Gemini 3.8 Flash (nivel gratuito). gemini-2.5-flash ya no está disponible para cuentas nuevas.
+GEMINI_MODEL = "gemini-3.8-flash"
 AI_DAILY_LIMIT = "30"
 # tope global diario de peticiones a Gemini para no salir del nivel gratuito
 AI_GLOBAL_DAILY_LIMIT = "200"

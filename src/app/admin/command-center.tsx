@@ -88,7 +88,7 @@ export function CommandCenter() {
         <Kpi label="Activación" value={`${fmtNumber(activation)}%`} hint="completan el cuestionario" icon={<UserPlus className="size-4" />} />
         <Kpi label="Entrenos" value={fmtNumber(sum(m.series.workouts))} hint={`${fmtNumber(t.withWorkouts)} usuarios han entrenado`} icon={<Dumbbell className="size-4" />} />
         <Kpi label="Visitas" value={fmtNumber(sum(m.series.visits))} hint={`en ${days} días`} icon={<Activity className="size-4" />} />
-        <Kpi label="Consultas IA" value={fmtNumber(sum(m.series.ai))} hint="Gemini 2.5 Flash" icon={<Sparkles className="size-4" />} />
+        <Kpi label="Consultas IA" value={fmtNumber(sum(m.series.ai))} hint="Gemini 3.8 Flash" icon={<Sparkles className="size-4" />} />
         <Kpi label="Errores 7 d" value={fmtNumber(t.errors7)} hint={t.errors7 ? "revisa la pestaña Errores" : "todo en orden"} icon={<AlertTriangle className="size-4" />} />
       </div>
 

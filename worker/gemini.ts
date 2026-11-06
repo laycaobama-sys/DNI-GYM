@@ -3,7 +3,7 @@
 import { GoogleGenAI, type Content } from "@google/genai";
 import { HttpError } from "./http";
 
-export const DEFAULT_MODEL = "gemini-2.5-flash";
+export const DEFAULT_MODEL = "gemini-3.8-flash";
 
 export interface GenOptions {
   system?: string;
@@ -24,7 +24,7 @@ const RETRYABLE = new Set([429, 500, 503]);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Modelos de respaldo (nivel gratuito) si el configurado deja de existir o no está disponible para la clave. */
-const FALLBACKS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.0-flash"];
+const FALLBACKS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
 /** Último modelo que funcionó en esta instancia del Worker. */
 let workingModel: string | null = null;
 /** Último error real de Gemini (sin datos sensibles), para el diagnóstico. */
@@ -74,11 +74,17 @@ export function createGeminiService(apiKey: string | undefined, model = DEFAULT_
   const ai = new GoogleGenAI({ apiKey });
   const candidates = [...new Set([workingModel, model, ...FALLBACKS].filter(Boolean) as string[])];
   // En Gemini 2.5 el razonamiento interno consume tokens de salida: lo acotamos para controlar coste y latencia.
+  // Gemini 3+ razona antes de responder: nivel de razonamiento bajo (rápido) y margen de tokens para que la respuesta no salga vacía.
+  const gen3 = (m: string) => !/^gemini-(1|2)\./.test(m);
   const config = (m: string, o: GenOptions) => ({
     systemInstruction: o.system,
     temperature: o.temperature ?? 0.6,
-    maxOutputTokens: (o.maxOutputTokens ?? 1500) + (/2\.5-pro/.test(m) ? 512 : 0),
-    ...(/2\.5/.test(m) ? { thinkingConfig: { thinkingBudget: /flash/.test(m) ? 0 : 512 } } : {}),
+    maxOutputTokens: (o.maxOutputTokens ?? 1500) + (gen3(m) ? 1024 : /2\.5-pro/.test(m) ? 512 : 0),
+    ...(gen3(m)
+      ? { thinkingConfig: { thinkingLevel: "LOW" as never } }
+      : /2\.5/.test(m)
+        ? { thinkingConfig: { thinkingBudget: /flash/.test(m) ? 0 : 512 } }
+        : {}),
   });
   const toContents = (history: ChatTurn[], message: string): Content[] => [
     ...history.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),

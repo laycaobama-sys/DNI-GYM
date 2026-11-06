@@ -26,7 +26,7 @@ Ya está conectado: cada push a `main` se construye y publica solo (Workers Buil
 - **Build command:** `npm run build` · **Deploy command:** `npx wrangler deploy`.
 - **D1:** `wrangler.toml` declara el binding `DB` sin `database_id`; en el primer despliegue Wrangler crea la base `dni-gym-db` automáticamente. Las tablas se crean/migran solas (`worker/db.ts`).
 - **IA (Gemini):** Worker `dni-gym` → **Settings → Variables and Secrets → Add → Type: Secret** → nombre `GEMINI_API_KEY`. Sin esta clave la app funciona igual y el Coach muestra un aviso. La clave nunca va en el código ni en el navegador.
-- **Variables** (en `wrangler.toml`): `ADMIN_EMAILS`, `TURNSTILE_SITE_KEY`, `GEMINI_MODEL` (por defecto `gemini-2.5-flash`, nivel gratuito), `AI_DAILY_LIMIT` (consultas de IA por usuario y día; admins ×4).
+- **Variables** (en `wrangler.toml`): `ADMIN_EMAILS`, `TURNSTILE_SITE_KEY`, `GEMINI_MODEL` (por defecto `gemini-3.8-flash`, nivel gratuito; con modelos de respaldo automáticos), `AI_DAILY_LIMIT` (consultas de IA por usuario y día; admins ×4).
 - **Secretos** (`npx wrangler secret put NOMBRE`): `GEMINI_API_KEY`, `TURNSTILE_SECRET`, `GOOGLE_CLIENT_SECRET`.
 - **Google (opcional):** en Google Cloud Console → APIs y servicios → Credenciales → *ID de cliente de OAuth* (aplicación web) con la URI de redirección `https://dni-gym.ibraguimova19.workers.dev/api/auth/google/callback`. Pon el ID como variable `GOOGLE_CLIENT_ID` y el secreto como `GOOGLE_CLIENT_SECRET`.
 
@@ -49,7 +49,7 @@ Solo para administradores (el servidor lo comprueba en cada petición):
 
 - **Resumen:** KPI en vivo (usuarios, activos, retención D7/D30, activación, entrenos, visitas, IA, errores), registros y activos por día, embudo de conversión, dispositivos, método de acceso, objetivos, orígenes, páginas de entrada, ejercicios más entrenados, horas de actividad y últimos registros. Periodo 7/30/90 días.
 - **CRM:** etapas automáticas (nuevo, activo, en riesgo, inactivo, bloqueado), salud 0–100, etiquetas, notas internas, exportar CSV y análisis de cada cliente con IA.
-- **Agentes IA** (Gemini 2.5 Flash): retención, crecimiento, soporte técnico, contenido SEO/AEO e inventario. Solo aconsejan y redactan; no cambian datos.
+- **Agentes IA** (Gemini 3.8 Flash): retención, crecimiento, soporte técnico, contenido SEO/AEO e inventario. Solo aconsejan y redactan; no cambian datos.
 - **Stock:** productos, entradas/salidas con motivo, mínimos con aviso, valor de coste y de venta, historial.
 - **Usuarios, Actividad, Errores y Sistema:** bloqueo, roles, enlaces de contraseña de un solo uso, auditoría y estado de la configuración.
 

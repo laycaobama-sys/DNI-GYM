@@ -70,7 +70,7 @@ export function Agents() {
       <div>
         <h1 className="font-athletic text-4xl font-extrabold uppercase italic leading-none">Agentes de IA</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Cada agente lee los datos reales de DNI GYM (sin emails ni datos de contacto) y te propone acciones. Solo aconsejan y redactan: ningún agente cambia datos por su cuenta. Funcionan con Gemini 2.5 Flash.
+          Cada agente lee los datos reales de DNI GYM (sin emails ni datos de contacto) y te propone acciones. Solo aconsejan y redactan: ningún agente cambia datos por su cuenta. Funcionan con Gemini 3.8 Flash.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
