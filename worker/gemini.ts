@@ -27,6 +27,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const FALLBACKS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.0-flash"];
 /** Último modelo que funcionó en esta instancia del Worker. */
 let workingModel: string | null = null;
+/** Último error real de Gemini (sin datos sensibles), para el diagnóstico. */
+let lastError: { model: string; status: number; message: string } | null = null;
 
 function statusOf(e: unknown): number {
   const s = (e as { status?: number; code?: number })?.status ?? (e as { code?: number })?.code;
@@ -59,6 +61,7 @@ function friendly(e: unknown, model: string): never {
   if (e instanceof HttpError) throw e;
   const st = statusOf(e);
   console.error("gemini_error", JSON.stringify({ model, status: st, message: msgOf(e) }));
+  lastError = { model, status: st, message: msgOf(e) };
   if (st === 429) throw new HttpError(429, "La IA está recibiendo demasiadas peticiones o se ha agotado el cupo gratuito de hoy. Inténtalo en unos minutos.");
   if (st === 401 || st === 403 || /API key|API_KEY|permission/i.test(msgOf(e))) throw new HttpError(502, "La clave de la IA no es válida o no tiene permiso. El administrador debe revisarla.");
   if (modelMissing(e)) throw new HttpError(502, "El modelo de IA configurado no está disponible. Inténtalo de nuevo en un momento.");
@@ -162,6 +165,21 @@ export async function diagnoseGemini(apiKey: string | undefined, model = DEFAULT
     }
   }
   return { configured: true, ok: available.length > 0, model, configuredAvailable: available.includes(model), available, using: workingModel, error };
+}
+
+/** Prueba mínima de generación (≈10 tokens) para comprobar que la IA responde de verdad. */
+export async function probeGemini(apiKey: string | undefined, model = DEFAULT_MODEL) {
+  const g = createGeminiService(apiKey, model);
+  if (!g) return { ok: false, error: "Falta GEMINI_API_KEY" };
+  const t0 = Date.now();
+  try {
+    const r = await g.generateText("Responde solo con la palabra OK.", { maxOutputTokens: 8, temperature: 0 });
+    let streamed = "";
+    for await (const c of g.streamChat([], "Responde solo con la palabra OK.", { maxOutputTokens: 8, temperature: 0 })) streamed += c;
+    return { ok: true, model: g.model, text: r.text.trim().slice(0, 40), stream: streamed.trim().slice(0, 40), ms: Date.now() - t0 };
+  } catch (e) {
+    return { ok: false, model: g.model, error: e instanceof Error ? e.message : String(e), raw: lastError, ms: Date.now() - t0 };
+  }
 }
 
 export type GeminiService = NonNullable<ReturnType<typeof createGeminiService>>;

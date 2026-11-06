@@ -26,7 +26,7 @@ import {
   verifyTurnstile,
   type UserRow,
 } from "./auth";
-import { DEFAULT_MODEL, createGeminiService, diagnoseGemini, type ChatTurn } from "./gemini";
+import { DEFAULT_MODEL, createGeminiService, diagnoseGemini, probeGemini, type ChatTurn } from "./gemini";
 import { notifyOwner, reminderMail, resetMail, sendMail, welcomeMail } from "./email";
 import { agentRoutes } from "./agent";
 import {
@@ -511,6 +511,10 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
   if (path === "/api/ai/status" && m === "GET") {
     const ip = req.headers.get("cf-connecting-ip") || "local";
     if (!(await rateLimit(env, `aistatus:${ip}`, 20, 3600))) throw new HttpError(429, "Demasiadas comprobaciones. Inténtalo más tarde.");
+    if (url.searchParams.get("probe") === "1") {
+      if (!(await rateLimit(env, "aiprobe:global", 5, 3600))) throw new HttpError(429, "Prueba ya realizada hace poco.");
+      return json(await probeGemini(env.GEMINI_API_KEY, env.GEMINI_MODEL || DEFAULT_MODEL));
+    }
     return json(await diagnoseGemini(env.GEMINI_API_KEY, env.GEMINI_MODEL || DEFAULT_MODEL));
   }
 
