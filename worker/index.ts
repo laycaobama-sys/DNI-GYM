@@ -954,12 +954,13 @@ async function indexNow(env: Env) {
   const base = (env.SITE_URL || "https://dnigym.com").replace(/\/$/, "");
   const xml = await (await env.ASSETS.fetch(new Request(`${base}/sitemap.xml`))).text();
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]).slice(0, 10000);
-  const res = await fetch("https://api.indexnow.org/indexnow", {
-    method: "POST",
-    headers: { "content-type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ host: new URL(base).host, key: INDEXNOW_KEY, keyLocation: `${base}/${INDEXNOW_KEY}.txt`, urlList: urls }),
-  });
-  return { status: res.status, urls: urls.length };
+  const body = JSON.stringify({ host: new URL(base).host, key: INDEXNOW_KEY, keyLocation: `${base}/${INDEXNOW_KEY}.txt`, urlList: urls });
+  const post = (endpoint: string) => fetch(endpoint, { method: "POST", headers: { "content-type": "application/json; charset=utf-8" }, body });
+  // api.indexnow.org reparte a todos los buscadores; si limita (429) se avisa directamente a Bing y Yandex
+  const main = await post("https://api.indexnow.org/indexnow");
+  if (main.ok) return { status: main.status, urls: urls.length, via: "indexnow.org" };
+  const [bing, yandex] = await Promise.all([post("https://www.bing.com/indexnow"), post("https://yandex.com/indexnow")]);
+  return { status: main.status, bing: bing.status, yandex: yandex.status, urls: urls.length };
 }
 
 /** Tareas diarias (Cron Trigger): recordatorios, resumen semanal al dueño y limpieza técnica. */

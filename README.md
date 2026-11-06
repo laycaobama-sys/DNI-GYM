@@ -37,7 +37,7 @@ npm install
 cp .dev.vars.example .dev.vars   # DEV_AUTH=1 habilita «Entrar sin Google» SOLO en local
 npm run build                    # genera out/
 npm run dev:worker               # Worker + D1 local en http://127.0.0.1:8787
-npm run test:api                 # 110 pruebas de la API (con el Worker arrancado)
+npm run test:api                 # 129 pruebas de la API (con el Worker arrancado)
 npm run test:gemini              # comprueba la clave de Gemini sin coste (lista modelos)
 ```
 
@@ -63,8 +63,15 @@ Solo para administradores (el servidor lo comprueba en cada petición):
   2. Compute → Email Service → Email Sending → **Onboard Domain** → `dnigym.com`.
   3. Variable `EMAIL_USERS = "1"` en `wrangler.toml` (o en el panel) y desplegar.
   Cada envío queda en el registro de **Admin → Sistema → Correo**. Los usuarios pueden darse de baja con un clic o desde su Perfil.
-- **Google en el dominio nuevo:** en Google Cloud → Credenciales → tu cliente OAuth → añade `https://dnigym.com/api/auth/google/callback`; después añade `dnigym.com` a `GOOGLE_HOSTS` en `wrangler.toml`. Hasta entonces el botón de Google solo se muestra en `*.workers.dev` (así nunca aparece un botón roto).
+- **Google:** activo en `dnigym.com` y en `*.workers.dev` (`GOOGLE_HOSTS`). URL de retorno registrada: `https://dnigym.com/api/auth/google/callback`.
 - **Tareas diarias (Cron 08:17 UTC):** recordatorios, resumen semanal al dueño y limpieza de sesiones/enlaces caducados.
+
+## Visibilidad en Google y en asistentes de IA (SEO + AEO)
+
+- **Buscadores:** sitemap con todas las páginas, `robots.txt` con `Content-Signal: search=yes, ai-input=yes, ai-train=yes`, datos estructurados (Organization y WebSite con `alternateName` «DNIGYM / dnigym», FAQ, HowTo, ExercisePlan), títulos ≤ 60 y descripciones ≤ 155 caracteres, 10 guías con respuesta directa.
+- **IndexNow:** cada lunes (y con `POST /api/seo/indexnow`, máx. 1/hora) se avisa a Bing, Yandex, Naver y Seznam de todas las URL. Clave: `/d1c26e164ea44e77409679619fcd5d94.txt`.
+- **Agentes de IA:** servidor MCP público en `https://dnigym.com/mcp` (search_exercises, get_exercise, list_routines, get_routine, calculate_calories), API pública `/api/public/*` + `/openapi.json`, `/.well-known/` (api-catalog, mcp/server-card.json, ai-catalog.json, agent-skills, poppy.json, security.txt), `llms.txt`/`llms-full.txt`, portada en Markdown con `Accept: text/markdown`, cabeceras `Link` y WebMCP.
+- **Pendiente del dueño:** Google Search Console (propiedad de dominio `dnigym.com`, verificación automática con Cloudflare) y enviar el sitemap; Bing Webmaster Tools (importar desde Search Console); DNSSEC (Cloudflare → DNS → Settings → Enable DNSSEC).
 
 ## Límites de IA (nivel gratuito de Gemini)
 
