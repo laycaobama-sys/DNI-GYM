@@ -26,7 +26,7 @@ import {
   verifyTurnstile,
   type UserRow,
 } from "./auth";
-import { DEFAULT_MODEL, createGeminiService, type ChatTurn } from "./gemini";
+import { DEFAULT_MODEL, createGeminiService, diagnoseGemini, type ChatTurn } from "./gemini";
 import { notifyOwner, reminderMail, resetMail, sendMail, welcomeMail } from "./email";
 import { agentRoutes } from "./agent";
 import {
@@ -505,6 +505,13 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
     await env.DB.prepare("INSERT INTO contact_messages (ts, name, email, subject, message, user_id) VALUES (?, ?, ?, ?, ?, ?)").bind(Date.now(), name, email, subject, message, u?.id ?? null).run();
     later(req, notifyOwner(env, "owner_contact", `Contacto: ${subject}`, [`De: ${name} <${email}>`, message], email));
     return json({ ok: true });
+  }
+
+  // diagnóstico gratuito de la IA (no genera texto ni expone la clave)
+  if (path === "/api/ai/status" && m === "GET") {
+    const ip = req.headers.get("cf-connecting-ip") || "local";
+    if (!(await rateLimit(env, `aistatus:${ip}`, 20, 3600))) throw new HttpError(429, "Demasiadas comprobaciones. Inténtalo más tarde.");
+    return json(await diagnoseGemini(env.GEMINI_API_KEY, env.GEMINI_MODEL || DEFAULT_MODEL));
   }
 
   // avisar a los buscadores de cambios (como mucho 1 vez por hora para todo el sitio)
