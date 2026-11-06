@@ -24,7 +24,7 @@ const RETRYABLE = new Set([429, 500, 503]);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Modelos de respaldo (nivel gratuito) si el configurado deja de existir o no está disponible para la clave. */
-const FALLBACKS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
+const FALLBACKS = ["gemini-3.8-flash", "gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-2.0-flash"];
 /** Último modelo que funcionó en esta instancia del Worker. */
 let workingModel: string | null = null;
 /** Último error real de Gemini (sin datos sensibles), para el diagnóstico. */
@@ -41,7 +41,7 @@ const msgOf = (e: unknown) => String((e as Error)?.message ?? e).replace(/key=[A
 const modelMissing = (e: unknown) => statusOf(e) === 404 || /not found|is not supported|no longer available|deprecated|unknown model/i.test(msgOf(e));
 
 /** Reintentos con espera exponencial ante límites de uso (429) o errores temporales (500/503). */
-async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, attempts = 2): Promise<T> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -50,7 +50,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
       last = e;
       const st = statusOf(e);
       if (!RETRYABLE.has(st) || i === attempts - 1) break;
-      await sleep(600 * 2 ** i + Math.random() * 300);
+      await sleep(400 + Math.random() * 300);
     }
   }
   throw last;
@@ -71,7 +71,8 @@ function friendly(e: unknown, model: string): never {
 
 export function createGeminiService(apiKey: string | undefined, model = DEFAULT_MODEL) {
   if (!apiKey) return null;
-  const ai = new GoogleGenAI({ apiKey });
+  // 25 s por intento: si un modelo está saturado se pasa al siguiente en lugar de dejar esperando al usuario
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 25_000 } });
   const candidates = [...new Set([workingModel, model, ...FALLBACKS].filter(Boolean) as string[])];
   // En Gemini 2.5 el razonamiento interno consume tokens de salida: lo acotamos para controlar coste y latencia.
   // Gemini 3+ razona antes de responder: nivel de razonamiento bajo (rápido) y margen de tokens para que la respuesta no salga vacía.
@@ -104,8 +105,11 @@ export function createGeminiService(apiKey: string | undefined, model = DEFAULT_
         return r;
       } catch (e) {
         last = e;
-        if (!modelMissing(e)) friendly(e, m);
-        console.warn("gemini_model_unavailable", JSON.stringify({ model: m, message: msgOf(e) }));
+        const st = statusOf(e);
+        // modelo retirado, saturado (503/500), sin cupo (429) o sin respuesta a tiempo: probar el siguiente modelo
+        const tryNext = modelMissing(e) || st === 503 || st === 500 || st === 429 || /timeout|timed out|aborted|deadline/i.test(msgOf(e));
+        if (!tryNext) friendly(e, m);
+        console.warn("gemini_model_skipped", JSON.stringify({ model: m, status: st, message: msgOf(e) }));
       }
     }
     friendly(last, model);
