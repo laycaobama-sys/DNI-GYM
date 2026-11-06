@@ -69,7 +69,12 @@ function friendly(e: unknown, model: string): never {
   throw new HttpError(502, "La IA no está disponible en este momento. Inténtalo de nuevo.");
 }
 
-export function createGeminiService(apiKey: string | undefined, model = DEFAULT_MODEL) {
+/** Modelo que funcionó recientemente (compartido entre servidores a través de D1). */
+export function preferModel(m: string | null) {
+  if (m) workingModel = m;
+}
+
+export function createGeminiService(apiKey: string | undefined, model = DEFAULT_MODEL, onSwitch?: (m: string) => void) {
   if (!apiKey) return null;
   // 25 s por intento: si un modelo está saturado se pasa al siguiente en lugar de dejar esperando al usuario
   const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 25_000 } });
@@ -101,6 +106,7 @@ export function createGeminiService(apiKey: string | undefined, model = DEFAULT_
         if (workingModel !== m) {
           if (m !== model) console.warn("gemini_fallback", JSON.stringify({ configured: model, using: m }));
           workingModel = m;
+          onSwitch?.(m);
         }
         return r;
       } catch (e) {

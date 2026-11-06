@@ -26,7 +26,7 @@ import {
   verifyTurnstile,
   type UserRow,
 } from "./auth";
-import { DEFAULT_MODEL, createGeminiService, diagnoseGemini, probeGemini, type ChatTurn } from "./gemini";
+import { DEFAULT_MODEL, createGeminiService, diagnoseGemini, preferModel, probeGemini, type ChatTurn } from "./gemini";
 import { notifyOwner, reminderMail, resetMail, sendMail, welcomeMail } from "./email";
 import { agentRoutes } from "./agent";
 import {
@@ -398,8 +398,16 @@ async function addAiUsage(env: Env, userId: string, tokens: number) {
     .run();
 }
 
-function gemini(env: Env) {
-  const g = createGeminiService(env.GEMINI_API_KEY, env.GEMINI_MODEL || DEFAULT_MODEL);
+/** Servicio de IA: empieza por el último modelo que funcionó (≤ 20 min) para no esperar a uno saturado. */
+async function gemini(env: Env) {
+  const row = await env.DB.prepare("SELECT value FROM meta WHERE key = 'ai_model_ok'").first<{ value: string }>().catch(() => null);
+  try {
+    const v = row ? (JSON.parse(row.value) as { m: string; ts: number }) : null;
+    if (v && Date.now() - v.ts < 20 * 60_000) preferModel(v.m);
+  } catch {}
+  const g = createGeminiService(env.GEMINI_API_KEY, env.GEMINI_MODEL || DEFAULT_MODEL, (m) => {
+    env.DB.prepare("INSERT INTO meta (key, value) VALUES ('ai_model_ok', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(JSON.stringify({ m, ts: Date.now() })).run().catch(() => {});
+  });
   if (!g) throw new HttpError(503, "La IA no está configurada todavía (falta el secreto GEMINI_API_KEY en Cloudflare).");
   return g;
 }
@@ -714,7 +722,7 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
       const text = String(message || "").trim().slice(0, 2000);
       if (!text) throw new HttpError(400, "Escribe tu pregunta");
       await checkAiQuota(env, user);
-      const g = gemini(env);
+      const g = await gemini(env);
       const hist = await env.DB.prepare("SELECT role, content FROM ai_messages WHERE user_id = ? ORDER BY id DESC LIMIT 12").bind(user.id).all<{ role: string; content: string }>();
       const history: ChatTurn[] = hist.results.reverse().map((h) => ({ role: h.role === "user" ? "user" : "model", text: h.content }));
       const system = `${COACH_SYSTEM}\n\nCATÁLOGO DNI GYM (nombre [slug]):\n${catalogText()}\n\n${await userContext(env, user)}`;
@@ -728,7 +736,7 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
     if (path === "/api/ai/workout" && m === "POST") {
       const b = await readJson<{ minutes?: number; place?: string; focus?: string; notes?: string }>(req, 4_000);
       await checkAiQuota(env, user);
-      const g = gemini(env);
+      const g = await gemini(env);
       const prompt = `${await userContext(env, user)}
 
 CATÁLOGO DNI GYM (nombre [slug]):
@@ -895,7 +903,7 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
     }
     if (seg[1] === "crm" && seg[2] && seg[3] === "ai" && m === "POST") {
       await checkAiQuota(env, admin);
-      const g = gemini(env);
+      const g = await gemini(env);
       const usage = { tokens: 0 };
       const ctx = await customerContext(env, seg[2]);
       return sse(g.streamChat([], ctx, { system: CUSTOMER_SYSTEM, temperature: 0.5, maxOutputTokens: 900 }, usage), async () => {
@@ -908,7 +916,7 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
       if (!(id in AGENTS)) throw new HttpError(404, "Agente no encontrado");
       const { message } = await readJson<{ message?: string }>(req, 8_000);
       await checkAiQuota(env, admin);
-      const g = gemini(env);
+      const g = await gemini(env);
       const usage = { tokens: 0 };
       const ctx = await agentContext(env, id, await platformContext(env));
       const ask = String(message || "").trim().slice(0, 1500) || "Haz tu análisis completo con los datos actuales.";
@@ -945,7 +953,7 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
       const text = String(message || "").trim().slice(0, 2000);
       if (!text) throw new HttpError(400, "Escribe tu pregunta");
       await checkAiQuota(env, admin);
-      const g = gemini(env);
+      const g = await gemini(env);
       const usage = { tokens: 0 };
       const system = `${ADMIN_SYSTEM}\n\n${await platformContext(env)}`;
       return sse(g.streamChat([], text, { system, temperature: 0.4, maxOutputTokens: 1400 }, usage), async () => {
