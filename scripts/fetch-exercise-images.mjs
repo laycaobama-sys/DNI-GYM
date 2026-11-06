@@ -31,7 +31,7 @@ for (const id of ids) {
       continue;
     }
     const buf = Buffer.from(await res.arrayBuffer());
-    await sharp(buf).resize({ width: 640, withoutEnlargement: true }).webp({ quality: 74 }).toFile(file);
+    await sharp(buf).resize({ width: 1000, withoutEnlargement: true }).sharpen({ sigma: 0.6 }).webp({ quality: 78 }).toFile(file);
     ok++;
   }
 }

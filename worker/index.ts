@@ -28,6 +28,7 @@ import {
 } from "./auth";
 import { DEFAULT_MODEL, createGeminiService, type ChatTurn } from "./gemini";
 import { notifyOwner, reminderMail, resetMail, sendMail, welcomeMail } from "./email";
+import { agentRoutes } from "./agent";
 import {
   AGENTS,
   CUSTOMER_SYSTEM,
@@ -506,6 +507,12 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
     return json({ ok: true });
   }
 
+  // avisar a los buscadores de cambios (como mucho 1 vez por hora para todo el sitio)
+  if (path === "/api/seo/indexnow" && m === "POST") {
+    if (!(await rateLimit(env, "indexnow:global", 1, 3600))) throw new HttpError(429, "Ya se avisó a los buscadores hace menos de una hora.");
+    return json(await indexNow(env));
+  }
+
   if (path === "/api/email/unsubscribe" && m === "GET") {
     const t = url.searchParams.get("t") || "";
     const u = t.length >= 16 ? await env.DB.prepare("SELECT * FROM users WHERE unsub_token = ?").bind(t).first<UserRow>() : null;
@@ -940,6 +947,21 @@ Equilibra con lo que ha entrenado en los últimos días (no repitas el mismo gru
   throw new HttpError(404, "Ruta no encontrada");
 }
 
+
+/** IndexNow: avisa a Bing, Yandex, Naver y Seznam (y a los buscadores de IA que usan Bing) de todas las URL del sitemap. */
+const INDEXNOW_KEY = "d1c26e164ea44e77409679619fcd5d94";
+async function indexNow(env: Env) {
+  const base = (env.SITE_URL || "https://dnigym.com").replace(/\/$/, "");
+  const xml = await (await env.ASSETS.fetch(new Request(`${base}/sitemap.xml`))).text();
+  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]).slice(0, 10000);
+  const res = await fetch("https://api.indexnow.org/indexnow", {
+    method: "POST",
+    headers: { "content-type": "application/json; charset=utf-8" },
+    body: JSON.stringify({ host: new URL(base).host, key: INDEXNOW_KEY, keyLocation: `${base}/${INDEXNOW_KEY}.txt`, urlList: urls }),
+  });
+  return { status: res.status, urls: urls.length };
+}
+
 /** Tareas diarias (Cron Trigger): recordatorios, resumen semanal al dueño y limpieza técnica. */
 async function daily(env: Env, ctx: ExecutionContext) {
   await ensureSchema(env);
@@ -965,8 +987,9 @@ async function daily(env: Env, ctx: ExecutionContext) {
       if (ok) await env.DB.prepare("UPDATE users SET last_reminder_at = ? WHERE id = ?").bind(now, u.id).run();
     }
   }
-  // lunes: resumen semanal al dueño
+  // lunes: aviso a buscadores (IndexNow) y resumen semanal al dueño
   if (new Date(now).getUTCDay() === 1) {
+    ctx.waitUntil(indexNow(env).catch((e) => console.error("indexnow", e)));
     const w = now - 7 * 864e5;
     const s = await env.DB.prepare(
       `SELECT (SELECT COUNT(*) FROM users) total, (SELECT COUNT(*) FROM users WHERE created_at >= ?1) nuevos, (SELECT COUNT(*) FROM users WHERE last_active_at >= ?1) activos,
@@ -990,7 +1013,17 @@ export default {
   },
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    const pth = url.pathname;
+    if (pth === "/" || pth === "/mcp" || pth === "/openapi.json" || pth.startsWith("/.well-known/") || pth.startsWith("/api/public/")) {
+      try {
+        const r = await agentRoutes(req, env, url);
+        if (r) return r;
+      } catch (e) {
+        console.error("agent route", pth, e);
+        if (pth !== "/") return json({ error: "Error interno" }, 500);
+      }
+    }
+    if (!pth.startsWith("/api/")) return env.ASSETS.fetch(req);
     CTX.set(req, ctx);
     try {
       return await handleApi(req, env, url);

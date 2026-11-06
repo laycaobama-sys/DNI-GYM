@@ -35,7 +35,7 @@ export function CookieNotice() {
   }
   if (!show || hidden) return null;
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-[70] lg:bottom-4 flex justify-center px-3">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-[70] flex justify-center px-3 lg:bottom-4 lg:justify-end lg:px-6">
       <div role="region" aria-label="Aviso de cookies" className="pointer-events-auto flex max-w-md animate-fade-up items-center gap-2 rounded-full border border-line-strong bg-surface-2/95 py-1.5 pl-3 pr-1.5 text-xs text-ink-2 shadow-xl backdrop-blur-xl">
         <Cookie className="size-4 shrink-0 text-accent" />
         <span>

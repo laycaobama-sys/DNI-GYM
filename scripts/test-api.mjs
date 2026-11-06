@@ -221,6 +221,37 @@ ok(clr.status === 200 && clr.data.deleted >= 1, "el dueño marca errores como re
 const cfg2 = (await anon("/api/config")).data;
 ok(cfg2.email && typeof cfg2.email.users === "boolean", "configuración de correo publicada");
 
+// ── descubrimiento para agentes de IA ──
+const raw = (path, init = {}) => fetch(BASE + path, init);
+const mcpCall = (body) => raw("/mcp", { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" }, body: JSON.stringify(body) }).then((r) => r.json());
+const init = await mcpCall({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } } });
+ok(init.result?.serverInfo?.name === "dni-gym" && init.result.capabilities.tools, "MCP: initialize");
+const tl = await mcpCall({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+ok(tl.result?.tools?.length === 5, "MCP: tools/list");
+const se = await mcpCall({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "search_exercises", arguments: { query: "sentadilla", limit: 3 } } });
+ok(se.result?.structuredContent?.results?.length >= 1 && !se.result.isError, "MCP: buscar ejercicios");
+const gr = await mcpCall({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_routine", arguments: { slug: "full-body-principiante" } } });
+ok(gr.result?.structuredContent?.days?.length >= 1, "MCP: detalle de rutina");
+const cc = await mcpCall({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "calculate_calories", arguments: { sex: "hombre", age: 30, heightCm: 178, weightKg: 80, activity: "moderado", goal: "perder" } } });
+ok(cc.result?.structuredContent?.calories > 1500, "MCP: calorías");
+ok((await mcpCall({ jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "get_exercise", arguments: { slug: "no-existe" } } })).result?.isError === true, "MCP: error controlado");
+ok((await raw("/mcp", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) })).status === 202, "MCP: notificaciones (202)");
+for (const [pth, type] of [["/.well-known/api-catalog", "linkset"], ["/.well-known/mcp/server-card.json", "json"], ["/.well-known/ai-catalog.json", "json"], ["/.well-known/agent-skills/index.json", "json"], ["/.well-known/poppy.json", "json"], ["/openapi.json", "json"], ["/.well-known/security.txt", "text"]]) {
+  const r = await raw(pth);
+  ok(r.status === 200 && (r.headers.get("content-type") || "").includes(type === "linkset" ? "linkset+json" : type === "json" ? "json" : "text"), `descubrimiento: ${pth}`);
+}
+const md = await raw("/", { headers: { accept: "text/markdown" } });
+ok(md.status === 200 && md.headers.get("content-type")?.startsWith("text/markdown") && (await md.text()).includes("DNI GYM"), "portada en Markdown para agentes");
+const home = await raw("/");
+ok(home.status === 200 && (home.headers.get("link") || "").includes("api-catalog") && home.headers.get("content-type")?.includes("text/html"), "portada HTML con cabeceras Link");
+const rob = await (await raw("/robots.txt")).text();
+ok(rob.includes("Content-Signal:") && rob.includes("Sitemap:") && rob.includes("GPTBot"), "robots.txt con Content-Signal");
+const ix = await raw("/.well-known/agent-skills/index.json").then((r) => r.json());
+const skillBody = await (await raw(new URL(ix.skills[0].url).pathname)).text();
+const digest = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(skillBody)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+ok(digest === ix.skills[0].sha256, "skills: el sha256 coincide con el archivo");
+ok((await raw("/api/public/exercises?q=hip")).status === 200, "API pública de ejercicios");
+
 ok((await a("/api/auth/logout", { method: "POST" })).status === 200, "cerrar sesión");
 ok((await a("/api/workouts")).status === 401, "tras cerrar sesión no hay acceso");
 await a("/api/auth/dev", { method: "POST", body: { email: `ana.${uniq}@test.dev` } });

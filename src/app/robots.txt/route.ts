@@ -1,11 +1,10 @@
-import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/site";
 
 export const dynamic = "force-static";
 
 /**
- * Buscadores y rastreadores de IA permitidos de forma explícita (SEO + AEO).
- * Todos pueden leer el contenido público; nadie puede entrar en zonas privadas ni en la API.
+ * robots.txt (SEO + AEO): buscadores y rastreadores de IA permitidos de forma explícita,
+ * con Content Signals (uso del contenido por IA) y el catálogo para agentes.
  */
 const CRAWLERS = [
   // OpenAI (ChatGPT)
@@ -36,11 +35,24 @@ const CRAWLERS = [
   "LinkedInBot", "Twitterbot", "Slackbot", "Discordbot", "WhatsApp", "TelegramBot",
 ];
 
-export default function robots(): MetadataRoute.Robots {
+export function GET() {
   const disallow = ["/panel/", "/admin/", "/bienvenida/", "/restablecer/", "/api/"];
-  return {
-    rules: [{ userAgent: "*", allow: "/", disallow }, { userAgent: CRAWLERS, allow: ["/", "/llms.txt", "/llms-full.txt"], disallow }],
-    sitemap: absoluteUrl("/sitemap.xml"),
-    host: absoluteUrl("/"),
-  };
+  const block = (agents: string[], extraAllow: string[] = []) =>
+    [...agents.map((a) => `User-Agent: ${a}`), "Allow: /", ...extraAllow.map((a) => `Allow: ${a}`), ...disallow.map((d) => `Disallow: ${d}`)].join("\n");
+  const body = [
+    "# DNI GYM · entrenador personal gratis (https://dnigym.com)",
+    "# Contenido público disponible para buscadores y asistentes de IA. Contacto: contacto@dnigym.com",
+    "",
+    "Content-Signal: search=yes, ai-input=yes, ai-train=yes",
+    "",
+    block(["*"], ["/api/public/"]),
+    "",
+    block(CRAWLERS, ["/llms.txt", "/llms-full.txt", "/api/public/", "/.well-known/"]),
+    "",
+    `Agentmap: ${absoluteUrl("/.well-known/ai-catalog.json")}`,
+    `Sitemap: ${absoluteUrl("/sitemap.xml")}`,
+    `Host: ${absoluteUrl("/")}`,
+    "",
+  ].join("\n");
+  return new Response(body, { headers: { "content-type": "text/plain; charset=utf-8" } });
 }

@@ -5,13 +5,16 @@ import path from "node:path";
 import sharp from "sharp";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const src = (n) => path.join(root, "public/ejercicios", `${n}.webp`);
+import fs from "node:fs";
+// Fuente: foto original en alta resolución (ORIG_DIR, descargada de free-exercise-db) o, si no, el webp publicado.
+const ORIG = process.env.ORIG_DIR;
+const src = (n) => (ORIG && fs.existsSync(path.join(ORIG, `${n}.jpg`)) ? path.join(ORIG, `${n}.jpg`) : path.join(root, "public/ejercicios", `${n}.webp`));
 const out = (n) => path.join(root, "public/brand", `${n}.webp`);
 
 // [salida, origen, ancho, alto, posición del recorte]
 const JOBS = [
-  ["hero", "T-Bar_Row_with_Handle-1", 900, 1100, "left"],
-  ["hero-wide", "T-Bar_Row_with_Handle-1", 1280, 720, "center"],
+  ["hero", "Split_Squat_with_Dumbbells-1", 850, 1040, "center"],
+  ["hero-wide", "Inchworm-1", 1600, 900, "center"],
   ["athlete-woman", "Pallof_Press-1", 800, 1000, "center"],
   ["jump", "Star_Jump-1", 800, 1000, "center"],
   ["climber", "Mountain_Climbers-0", 1000, 700, "center"],
@@ -48,13 +51,18 @@ const JOBS = [
   ["p-salud-y-movilidad-50", "Elliptical_Trainer-1", 900, 600, "center"],
 ];
 
-for (const [name, from, w, h, pos] of JOBS) {
+for (const [name, from, w0, h0, pos] of JOBS) {
+  // nunca ampliar: si la foto es más pequeña que el recorte pedido, se reduce el recorte manteniendo la proporción
+  const meta = await sharp(src(from)).metadata();
+  const k = Math.min(1, meta.width / w0, meta.height / h0) < 1 ? Math.max(meta.width / w0, meta.height / h0) > 1 ? Math.min(meta.width / w0, meta.height / h0) : Math.min(meta.width / w0, meta.height / h0) : 1;
+  const w = Math.round(w0 * Math.min(1, k)), h = Math.round(h0 * Math.min(1, k));
   await sharp(src(from))
     .resize(w, h, { fit: "cover", position: pos })
+    .sharpen({ sigma: 0.7 })
     .grayscale()
     .linear(1.35, -38)
     .modulate({ brightness: 0.92 })
-    .webp({ quality: 78 })
+    .webp({ quality: 82 })
     .toFile(out(name));
 }
 console.log(`${JOBS.length} imágenes generadas en public/brand`);

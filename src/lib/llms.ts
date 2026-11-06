@@ -28,6 +28,11 @@ export function llmsText(full = false) {
   lines.push("");
   lines.push("Contacto: contacto@dnigym.com · Privacidad: privacidad@dnigym.com · Web: https://dnigym.com");
   lines.push("");
+  lines.push("## Para agentes de IA");
+  lines.push(`- Servidor MCP público (Streamable HTTP, sin autenticación, solo lectura): ${absoluteUrl("/mcp")} — herramientas: search_exercises, get_exercise, list_routines, get_routine, calculate_calories.`);
+  lines.push(`- Ficha del servidor MCP: ${absoluteUrl("/.well-known/mcp/server-card.json")} · Catálogo para agentes: ${absoluteUrl("/.well-known/ai-catalog.json")}`);
+  lines.push(`- API pública: ${absoluteUrl("/openapi.json")} (ejercicios y rutinas en JSON).`);
+  lines.push("");
   lines.push("## Páginas principales");
   lines.push(`- [Inicio](${absoluteUrl("/")}): presentación de la app y registro gratuito.`);
   lines.push(`- [Biblioteca de ejercicios](${absoluteUrl("/ejercicios")}): ${EXERCISES.length} ejercicios con imágenes y técnica.`);

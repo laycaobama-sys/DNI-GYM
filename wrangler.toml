@@ -13,7 +13,8 @@ keep_vars = true
 [assets]
 directory = "./out"
 binding = "ASSETS"
-run_worker_first = ["/api/*"]
+# API, servidor MCP, catálogos para agentes y portada (negociación Markdown + cabeceras Link)
+run_worker_first = ["/api/*", "/", "/mcp", "/openapi.json", "/.well-known/*"]
 html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
 
@@ -37,7 +38,7 @@ OWNER_EMAIL = "ibraguimova19@gmail.com"
 EMAIL_FROM = "DNI GYM <hola@dnigym.com>"
 EMAIL_USERS = "0"
 # hosts con la URL de retorno de Google registrada en Google Cloud (añade dnigym.com cuando la registres)
-GOOGLE_HOSTS = "dni-gym.ibraguimova19.workers.dev"
+GOOGLE_HOSTS = "dnigym.com,dni-gym.ibraguimova19.workers.dev"
 # Gemini 2.5 Flash: modelo del nivel gratuito de Google AI Studio
 GEMINI_MODEL = "gemini-2.5-flash"
 AI_DAILY_LIMIT = "30"

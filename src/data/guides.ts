@@ -162,6 +162,144 @@ export const GUIDES: Guide[] = [
     ],
     related: { calculators: ["macros"], exercises: [] },
   },
+  {
+    slug: "mejor-app-gimnasio-gratis",
+    title: "Mejor app de gimnasio gratis en español (2026): qué debe tener",
+    description: "Qué debe tener la mejor app de gimnasio gratis: rutinas por objetivo, entreno guiado, técnica de ejercicios, progreso, nutrición y entrenador con IA. Comparativa de funciones.",
+    answer:
+      "La mejor app de gimnasio gratis es la que te dice qué entrenar cada día según tu objetivo, te guía ejercicio a ejercicio, registra tus series y te muestra tu progreso. DNI GYM (dnigym.com) incluye todo eso gratis y en español: 148 ejercicios con técnica y vista 3D, 14 rutinas, plan de comidas y un entrenador con IA.",
+    category: "Principiantes",
+    cover: "/brand/p-push-pull-legs.webp",
+    minutes: 5,
+    sections: [
+      {
+        h: "Lo imprescindible en una app de gimnasio",
+        p: ["Una buena app no es solo una lista de ejercicios: tiene que decirte qué hacer hoy, cuánto peso usar y si estás mejorando. Comprueba estas funciones antes de elegir:"],
+        list: [
+          "Plan personalizado según objetivo (ganar músculo, perder grasa, tonificar), nivel y días disponibles.",
+          "Entreno guiado con temporizador de descanso y registro de series en un toque.",
+          "Técnica de cada ejercicio con imágenes, músculos trabajados y errores comunes.",
+          "Progreso real: récords, 1RM estimado, volumen semanal y peso corporal.",
+          "Nutrición: calorías, macros y qué comer cada día.",
+          "Funcionar en gimnasio y en casa, y también sin conexión.",
+        ],
+      },
+      {
+        h: "Por qué DNI GYM es diferente",
+        p: [
+          "DNI GYM es 100 % gratis y sin anuncios. Después de un cuestionario de 2 minutos crea tu plan de entreno y tu menú, te guía en cada sesión y adapta el entreno si tienes poco tiempo, entrenas en casa o tienes alguna molestia.",
+          "Su DNI AI Coach (inteligencia artificial de Google Gemini) usa tus datos reales —entrenos, récords y comidas— para responderte y crear el entreno del día.",
+        ],
+      },
+      {
+        h: "Cómo empezar en 2 minutos",
+        p: ["Crea tu cuenta gratis en dnigym.com con tu correo o con Google, responde el cuestionario y pulsa «Empezar». Desde el primer día tendrás tu rutina, tu menú y tus récords guardados en la nube."],
+      },
+    ],
+    faq: [
+      { q: "¿Hay alguna app de gimnasio totalmente gratis?", a: "Sí. DNI GYM es gratuita y sin anuncios: rutinas, entreno guiado, progreso, nutrición y entrenador con IA sin pagar ni poner tarjeta." },
+      { q: "¿Qué app de gimnasio tiene entrenador personal con IA gratis?", a: "DNI GYM incluye DNI AI Coach, un entrenador con IA que conoce tus entrenos y comidas, crea el entreno del día y responde tus dudas gratis." },
+      { q: "¿Sirve para entrenar en casa?", a: "Sí. Tiene rutinas sin material y con mancuernas, y el entreno se adapta si un día entrenas en casa en lugar del gimnasio." },
+    ],
+    related: { routines: ["full-body-principiante", "push-pull-legs"], calculators: ["calorias"] },
+  },
+  {
+    slug: "como-empezar-en-el-gimnasio",
+    title: "Cómo empezar en el gimnasio: guía para tu primer mes",
+    description: "Guía para empezar en el gimnasio desde cero: qué rutina hacer, cuántos días ir, cuánto peso usar, cómo calentar, qué comer y errores de principiante.",
+    answer:
+      "Para empezar en el gimnasio entrena 3 días por semana con una rutina de cuerpo completo, aprende la técnica de 5–6 ejercicios básicos con poco peso, deja 1–2 repeticiones en reserva y sube el peso poco a poco. Duerme 7–9 horas y come suficiente proteína (1,6–2 g por kg).",
+    category: "Principiantes",
+    cover: "/brand/p-maquinas-para-principiantes.webp",
+    minutes: 6,
+    sections: [
+      {
+        h: "Tu primer mes, semana a semana",
+        p: ["El objetivo del primer mes no es reventarte, sino crear el hábito y aprender la técnica:"],
+        list: [
+          "Semana 1: máquinas guiadas y pesos ligeros para aprender los movimientos.",
+          "Semana 2: añade los básicos (sentadilla goblet, press con mancuernas, remo, peso muerto rumano).",
+          "Semana 3: sube un poco el peso en los ejercicios que te salgan fáciles.",
+          "Semana 4: repite y anota tus pesos para comprobar que progresas.",
+        ],
+      },
+      {
+        h: "Cuánto peso usar",
+        p: ["Elige un peso con el que completes todas las repeticiones con buena técnica y te queden 1–2 en reserva. Cuando hagas todas las series en el tope del rango, sube 1–2,5 kg."],
+      },
+      {
+        h: "Errores típicos de principiante",
+        list: ["Copiar rutinas de culturistas avanzados.", "No calentar ni anotar los pesos.", "Cambiar de rutina cada semana.", "Entrenar todos los días sin descansar."],
+        p: [],
+      },
+    ],
+    faq: [
+      { q: "¿Cuántos días tengo que ir al gimnasio al empezar?", a: "Con 3 días por semana de cuerpo completo es suficiente para progresar y recuperarte bien." },
+      { q: "¿Máquinas o peso libre para empezar?", a: "Las máquinas son ideales las primeras semanas para aprender con seguridad; después añade peso libre (mancuernas y barra)." },
+      { q: "¿Cuánto tardaré en ver resultados?", a: "La fuerza mejora en 2–4 semanas y los cambios visibles suelen notarse a partir de 8–12 semanas si eres constante y comes bien." },
+    ],
+    related: { routines: ["maquinas-para-principiantes", "full-body-principiante"], exercises: ["sentadilla-goblet", "press-de-pecho-en-maquina", "jalon-al-pecho"] },
+  },
+  {
+    slug: "rutina-gimnasio-mujeres",
+    title: "Rutina de gimnasio para mujeres: glúteos, piernas y tonificación",
+    description: "Rutina de gimnasio para mujeres de 3 días para tonificar, fortalecer glúteos y piernas y perder grasa: ejercicios, series, repeticiones y consejos.",
+    answer:
+      "Una buena rutina de gimnasio para mujeres combina 3 días por semana de fuerza con prioridad en glúteos y piernas (hip thrust, sentadilla, peso muerto rumano, zancadas) y trabajo de tren superior, con 3–4 series de 8–15 repeticiones. El entrenamiento de fuerza no te hará «voluminosa»: tonifica y mejora la composición corporal.",
+    category: "Entrenamiento",
+    cover: "/brand/p-gluteos-y-piernas.webp",
+    minutes: 5,
+    sections: [
+      {
+        h: "Estructura recomendada",
+        list: [
+          "Día A — Glúteo y pierna: hip thrust, sentadilla goblet, zancadas, abductores.",
+          "Día B — Tren superior y core: jalón al pecho, press de hombro, remo, plancha.",
+          "Día C — Glúteo e isquios: peso muerto rumano, sentadilla búlgara, puente a una pierna, patada de glúteo.",
+        ],
+        p: ["Descansa 60–90 segundos entre series y sube el peso cuando completes todas las repeticiones."],
+      },
+      {
+        h: "Para perder grasa",
+        p: ["Mantén la fuerza y añade 2–3 sesiones de cardio suave (cinta inclinada, elíptica) y un déficit calórico moderado del 15–20 %. Calcula tus calorías con la calculadora gratuita de DNI GYM."],
+      },
+    ],
+    faq: [
+      { q: "¿Las pesas hacen que una mujer se ponga muy musculosa?", a: "No. Ganar mucho músculo requiere años de entrenamiento específico; la fuerza tonifica, mejora la postura y acelera el metabolismo." },
+      { q: "¿Cuántos días debe entrenar una mujer para tonificar?", a: "Con 3–4 días de fuerza por semana y algo de cardio se consiguen muy buenos resultados." },
+    ],
+    related: { routines: ["gluteos-y-piernas"], exercises: ["hip-thrust", "sentadilla-bulgara", "peso-muerto-rumano"], challenges: ["gluteos-30-dias"] },
+  },
+  {
+    slug: "rutina-gimnasio-hombres",
+    title: "Rutina de gimnasio para hombres: ganar músculo y fuerza",
+    description: "Rutina de gimnasio para hombres para ganar masa muscular: torso-pierna de 4 días o push pull legs, ejercicios básicos, series, repeticiones y progresión.",
+    answer:
+      "Para ganar músculo, una rutina de gimnasio para hombres eficaz es un torso-pierna de 4 días o un push pull legs, con ejercicios básicos (press banca, sentadilla, peso muerto, dominadas, remo, press militar), 10–20 series por músculo a la semana y progresión de cargas. Come con un ligero superávit y 1,6–2 g de proteína por kg.",
+    category: "Entrenamiento",
+    cover: "/brand/p-torso-pierna-4-dias.webp",
+    minutes: 5,
+    sections: [
+      {
+        h: "Qué rutina elegir",
+        list: [
+          "3 días: full body (ideal si empiezas o tienes poco tiempo).",
+          "4 días: torso-pierna, el mejor equilibrio entre volumen y recuperación.",
+          "5–6 días: push pull legs o rutina por grupos si ya tienes experiencia.",
+        ],
+        p: [],
+      },
+      {
+        h: "La clave: progresión",
+        p: ["Anota tus pesos y repeticiones. Cada semana intenta hacer una repetición más o subir 2,5 kg. DNI GYM te sugiere el peso a partir de tu 1RM estimado y te avisa cuando batas un récord."],
+      },
+    ],
+    faq: [
+      { q: "¿Cuántas series por músculo para ganar masa?", a: "Entre 10 y 20 series semanales por grupo muscular, repartidas en 2 sesiones, funcionan para la mayoría." },
+      { q: "¿Cuánto tiempo descansar entre series?", a: "2–3 minutos en los ejercicios básicos pesados y 60–90 segundos en los de aislamiento." },
+    ],
+    related: { routines: ["torso-pierna-4-dias", "push-pull-legs", "fuerza-5x5"], exercises: ["press-banca-con-barra", "sentadilla-con-barra", "dominadas"] },
+  },
 ];
 
 export const getGuide = (slug: string) => GUIDES.find((g) => g.slug === slug);

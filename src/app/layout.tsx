@@ -1,4 +1,5 @@
 import { CookieNotice } from "@/components/cookie-notice";
+import { WebMcp } from "@/components/web-mcp";
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Inter, Outfit } from "next/font/google";
 import "./globals.css";
@@ -55,6 +56,9 @@ const orgLd = [
     "@type": "Organization",
     "@id": absoluteUrl("/#organization"),
     name: SITE.name,
+    alternateName: SITE.alternateNames,
+    slogan: "Tu entrenador personal gratis",
+    knowsAbout: ["entrenamiento de fuerza", "gimnasio", "entrenamiento en casa", "nutrición deportiva", "hipertrofia", "pérdida de grasa"],
     url: SITE.url,
     logo: absoluteUrl("/icon-512.png"),
     email: "contacto@dnigym.com",
@@ -69,6 +73,7 @@ const orgLd = [
     "@type": "WebSite",
     "@id": absoluteUrl("/#website"),
     name: SITE.name,
+    alternateName: SITE.alternateNames,
     url: SITE.url,
     inLanguage: "es",
     publisher: { "@id": absoluteUrl("/#organization") },
@@ -83,10 +88,16 @@ const orgLd = [
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${inter.variable} ${outfit.variable} ${barlow.variable} h-full antialiased`}>
+      <head>
+        <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json" />
+        <link rel="alternate" type="text/markdown" href="/llms.txt" title="DNI GYM para asistentes de IA" />
+        <link rel="api-catalog" href="/.well-known/api-catalog" />
+      </head>
       <body className="flex min-h-full flex-col">
         <JsonLd data={orgLd} />
         <Providers>{children}</Providers>
         <CookieNotice />
+        <WebMcp />
       </body>
     </html>
   );
